@@ -19,7 +19,7 @@ license: Proprietary. LICENSE.txt has complete terms
 
 ## Requirements for every output
 
-- **Professional font** (Arial, Times New Roman) throughout, unless the user says otherwise.
+- **Professional font** (Meiryo UI) throughout, unless the user says otherwise.
 - **Zero formula errors.** Never ship while `recalc.py` reports `errors_found`. If you think an error predates you, prove it: load the *original* with `data_only=True` and look at that cell. An error you introduced looks exactly like one you inherited.
 - **Use formulas, never hardcoded results.** Write `sheet['B10'] = '=SUM(B2:B9)'`, not the Python-computed total. The sheet must recalculate when its inputs change.
 - **Follow the user's spec literally.** Exact tab names, exact column headers, and the formula they spelled out. A redesign that computes something else fails, however elegant.
