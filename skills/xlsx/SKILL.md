@@ -118,7 +118,32 @@ img = XLImage("flowchart.png")
 img.width, img.height = 420, 540   # scale proportionally, never stretch
 ws.add_image(img, "A4")
 ```
+### Reserve space below the image (don't guess row count)
 
+`ws.add_image(img, "A4")` creates a `oneCellAnchor`: the image floats at a fixed pixel size and does not push cells down or resize with them. If content after the image is placed a fixed number of rows below based on an assumed default row height, that assumption is unreliable across viewers/locales — the image can end up taller than the gap and visually cover the next section's headers/text.
+
+Compute the rows to skip from the image's **actual** pixel height, and explicitly set the row height for every row in that span so the reserved space is deterministic — don't rely on the default:
+
+```python
+from openpyxl.utils import row_col_to_cell  # not required, shown for clarity
+
+img_height_px = 540          # the height you set on the XLImage
+px_per_pt = 96 / 72           # standard screen DPI conversion
+row_height_pt = 15            # explicit row height you're reserving, in points
+row_height_px = row_height_pt * px_per_pt
+
+start_row = 4                 # the row the image is anchored to (e.g. "A4")
+rows_needed = int(img_height_px / row_height_px) + 1  # +1 for rounding slack
+margin_rows = 2                # a couple of extra rows of margin
+
+for r in range(start_row, start_row + rows_needed + margin_rows):
+    ws.row_dimensions[r].height = row_height_pt
+
+next_content_row = start_row + rows_needed + margin_rows
+ws[f"A{next_content_row}"] = "..."  # safe to write here, guaranteed clear of the image
+```
+
+Never assume a default row height (e.g. "~20px/row") to eyeball where the next section starts — set it explicitly, or the layout silently breaks depending on the viewer/locale's default row height.
 ### Things to verify before shipping
 
 - **Check the rendered image against the source definition** (`.dot`/`.mmd`), not just that the render command exited 0 — a malformed edge or bracket is often silently dropped rather than raising an error.
