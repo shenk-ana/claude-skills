@@ -12,7 +12,7 @@ license: Proprietary. LICENSE.txt has complete terms
 | **Bulk data** in or out | `pandas` (`read_excel`, `to_excel`) |
 | **Quick look** at a sheet | `markitdown file.xlsx` — `## SheetName` per sheet; reads `.xlsm` too. No cell coordinates, so don't plan edits from it |
 | **Read** a model (formulas *and* values) | two `load_workbook` passes — see gotchas |
-
+| **Flowchart** | insert as image | Mermaid (`mmdc`) → PNG → `openpyxl` — see Mermaid section below |
 > `openpyxl`, `pandas`, and `markitdown` are preinstalled — do not run `pip install` first; write the script and import directly. Only if an import fails (or the `markitdown` command is missing): `pip install` the missing package.
 
 > Script paths below are relative to this skill's directory.
@@ -76,7 +76,63 @@ literal `#NAME?` baked into the file you deliver.
 - **Merged cells: write the top-left anchor only.** Every other cell in the range is a `MergedCell` whose `.value` is read-only.
 - **`.xlsm` loses its macros unless you pass `keep_vba=True`** to `load_workbook`.
 - **A sheet name containing a space must be quoted** in a cross-sheet reference: `='Assumptions Inputs'!$B$5`. Unquoted, it evaluates to `#VALUE!`.
+## Mermaid flowchart → Excel
 
+| Task | Approach |
+|---|---|
+| **Define flowchart structure** | Mermaid syntax (`flowchart TD`) — describe nodes and edges as text, don't hand-place coordinates |
+| **Render to image** | `mmdc` (mermaid-cli) exports PNG/SVG |
+| **Insert into Excel** | `openpyxl.drawing.image.Image`, same as any other image insert |
+
+> `mmdc` requires Node.js with `@mermaid-js/mermaid-cli` installed globally. If the command is missing, `npm install -g @mermaid-js/mermaid-cli` once — don't reinstall on every run.
+
+### Basic flow
+
+```bash
+# 1. Write a .mmd file defining the flowchart
+cat > flowchart.mmd << 'EOF'
+flowchart TD
+    A[Start] --> B[Input data]
+    B --> C{Data valid?}
+    C -->|Yes| D[Generate report]
+    C -->|No| E[Return for revision]
+    E --> B
+    D --> F[End]
+EOF
+
+# 2. Render to image (white background, upscale for crispness)
+mmdc -i flowchart.mmd -o flowchart.png -b white --scale 3
+```
+
+```python
+# 3. Insert into Excel
+from openpyxl.drawing.image import Image as XLImage
+img = XLImage("flowchart.png")
+img.width, img.height = 420, 540   # scale proportionally, never stretch
+ws.add_image(img, "A4")
+```
+
+### Node/edge syntax essentials
+
+- Shapes: `[rectangle]` for a step · `{diamond}` for a decision · `([rounded])` for start/end · `((circle))` for a connector
+- Label a branch: `C -->|Yes| D`, `C -->|No| E` — the label goes between the pipes `|...|`
+- Use `classDef` for consistent styling instead of inline styles per node:
+  ```
+  classDef startEnd fill:#E2EFDA,stroke:#548235
+  classDef process fill:#DCE6F1,stroke:#4472C4
+  classDef decision fill:#FCE4D6,stroke:#C55A11
+  class A,F startEnd
+  class B,E process
+  class C decision
+  ```
+
+### Things to verify before shipping
+
+- **Check the rendered output against the `.mmd` source**, not just that `mmdc` exited without error. A malformed edge or unmatched bracket is often silently dropped rather than raising an error — count nodes and edges by eye against the definition.
+- **CJK text**: `mmdc`'s default font may not cover CJK glyphs, showing boxes or missing characters. Pass a font that includes CJK (via `--cssFile` overriding `font-family`, or use an environment with Noto Sans CJK pre-installed) whenever labels contain Chinese/Japanese/Korean text.
+- **The image is static once inserted.** Node text and position cannot be edited inside Excel afterward. If editable shapes are needed, use the native-shapes approach instead (`xdr:sp` with `flowChartXxx` preset geometries).
+- **Match aspect ratio** when setting `img.width`/`img.height` in openpyxl — check the source image's native dimensions first, don't stretch.
+  
 ## Financial models
 
 Unless the user says otherwise, or the existing file already does something else.
