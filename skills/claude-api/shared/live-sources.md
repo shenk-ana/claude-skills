@@ -92,7 +92,7 @@ Use these when a managed-agents binding, behavior, or wire-level detail isn't co
 | Tools                 | `https://platform.claude.com/docs/en/managed-agents/tools.md`                    | "Extract built-in toolset, custom tool definitions, and tool result wire format"                |
 | Files                 | `https://platform.claude.com/docs/en/managed-agents/files.md`                    | "Extract file upload, mount paths, session resources, and listing/downloading session outputs"  |
 | Permission Policies   | `https://platform.claude.com/docs/en/managed-agents/permission-policies.md`      | "Extract permission policy types (allow/deny/confirm) and per-tool config"                     |
-| Multi-Agent           | `https://platform.claude.com/docs/en/managed-agents/multi-agent.md`              | "Extract multi-agent composition patterns, sub-agent invocation, and result handoff"            |
+| Multi-Agent           | `https://platform.claude.com/docs/en/managed-agents/multiagent-orchestration.md` | "Extract multi-agent composition patterns, sub-agent invocation, and result handoff"            |
 | Observability         | `https://platform.claude.com/docs/en/managed-agents/observability.md`            | "Extract logging, tracing, and usage telemetry exposed by managed agents"                       |
 | Webhooks              | `https://platform.claude.com/docs/en/managed-agents/webhooks.md`                 | "Extract webhook endpoint registration, HMAC signature verification, supported event types, and delivery semantics" |
 | GitHub                | `https://platform.claude.com/docs/en/managed-agents/github.md`                   | "Extract github_repository resource shape, multi-repo mounting, and token rotation"             |
@@ -131,6 +131,14 @@ WebFetch these when a binding (class, method, namespace, field) isn't covered in
 | PHP        | `https://github.com/anthropics/anthropic-sdk-php`        | "Extract beta managed-agents classes and method signatures (`$client->beta->agents`, `BetaManagedAgents*` params)"      |
 
 Each SDK repo also ships runnable programs under `examples/` — including the refusal-fallback / `fallbacks` examples (client-side middleware registration, fallback state, server-side `fallbacks` param). Fetch those for exact per-language syntax instead of translating another language's example.
+
+### SDK major-version upgrade guides
+
+Authoritative change lists for upgrading the SDK package itself across a major version. The bundled `{lang}/claude-api/sdk-upgrade.md` is the executable form; when the two disagree, the repository guide wins.
+
+| SDK                | URL                                                                         | Extraction Prompt                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Python (0.x → 1.x) | `https://github.com/anthropics/anthropic-sdk-python/blob/main/MIGRATION.md` | "Extract every breaking change with its before/after code, the new minimum Python version, and the upgrade command" |
 
 ---
 
