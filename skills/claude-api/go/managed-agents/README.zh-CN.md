@@ -1,18 +1,18 @@
 # Managed Agents — Go
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Bindings not shown here:** This README covers the most common managed-agents flows for Go. If you need a class, method, namespace, field, or behavior that isn't shown, WebFetch the Go SDK repo **or the relevant docs page** from `shared/live-sources.md` rather than guess. Do not extrapolate from cURL shapes or another language's SDK.
+> **此处未列出的绑定：** 本 README 覆盖 Go 上最常见的 managed-agents 流程。若需要未展示的类、方法、命名空间、字段或行为，请 WebFetch Go SDK 仓库 **或** `shared/live-sources.md` 中的相关文档页，不要猜测。不要从 cURL 形态或其他语言的 SDK 外推。
 
-> **Agents are persistent — create once, reference by ID.** Store the agent ID returned by `agents.New` and pass it to every subsequent `sessions.New`; do not call `agents.New` in the request path. **Recommended:** define agents and environments as version-controlled YAML applied with the `ant` CLI — see `shared/anthropic-cli.md` (its live-docs URL is in `shared/live-sources.md`). The CLI owns the control plane (create/update); your code owns the data plane (sessions with the stored ID). The examples below show in-code creation for when you must provision programmatically; in production the create call belongs in setup, not in the request path.
+> **Agent 是持久的 —— 创建一次，之后用 ID 引用。** 保存 `agents.New` 返回的 agent ID，并在后续每次 `sessions.New` 中传入；不要在请求路径里调用 `agents.New`。**推荐：** 将 agent 和环境定义为纳入版本控制的 YAML，并用 `ant` CLI 应用 —— 见 `shared/anthropic-cli.md`（其在线文档 URL 在 `shared/live-sources.md`）。CLI 负责控制面（创建/更新）；你的代码负责数据面（用已保存的 ID 开 session）。下面的示例展示必须用代码预配时的创建方式；生产环境中，创建调用应放在初始化阶段，而不是请求路径里。
 
-## Installation
+## 安装
 
 ```bash
 go get github.com/anthropics/anthropic-sdk-go
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```go
 import (
@@ -35,7 +35,7 @@ ctx := context.Background()
 
 ---
 
-## Create an Environment
+## 创建环境
 
 ```go
 environment, err := client.Beta.Environments.New(ctx, anthropic.BetaEnvironmentNewParams{
@@ -56,11 +56,11 @@ fmt.Println(environment.ID) // env_...
 
 ---
 
-## Create an Agent (required first step)
+## 创建 Agent（必做的第一步）
 
-> ⚠️ **There is no inline agent config.** `Model`/`System`/`Tools` live on the agent object, not the session. Always start with `Beta.Agents.New()` — the session only takes `Agent: anthropic.BetaSessionNewParamsAgentUnion{OfString: anthropic.String(agent.ID)}` (or the typed `OfBetaManagedAgentsAgents` variant when you need a specific version).
+> ⚠️ **没有内联 agent 配置。** `Model`/`System`/`Tools` 在 agent 对象上，不在 session 上。始终先调用 `Beta.Agents.New()` —— session 只接收 `Agent: anthropic.BetaSessionNewParamsAgentUnion{OfString: anthropic.String(agent.ID)}`（需要特定版本时用类型化的 `OfBetaManagedAgentsAgents` 变体）。
 
-### Minimal
+### 最小示例
 
 ```go
 // 1. Create the agent (reusable, versioned)
@@ -100,9 +100,9 @@ fmt.Printf("Session ID: %s, status: %s\n", session.ID, session.Status)
 fmt.Printf("Trace: https://platform.claude.com/workspaces/default/sessions/%s\n", session.ID) // swap 'default' for your workspace ID if the API key is not in the Default workspace
 ```
 
-### Updating an Agent
+### 更新 Agent
 
-Updates create new versions; the agent object is immutable per version.
+更新会创建新版本；每个版本的 agent 对象不可变。
 
 ```go
 updatedAgent, err := client.Beta.Agents.Update(ctx, agent.ID, anthropic.BetaAgentUpdateParams{
@@ -133,7 +133,7 @@ if err != nil {
 
 ---
 
-## Send a User Message
+## 发送用户消息
 
 ```go
 _, err = client.Beta.Sessions.Events.Send(ctx, session.ID, anthropic.BetaSessionEventSendParams{
@@ -154,11 +154,11 @@ if err != nil {
 }
 ```
 
-> 💡 **Stream-first:** Open the stream *before* (or concurrently with) sending the message. The stream only delivers events that occur after it opens — stream-after-send means early events arrive buffered in one batch. See [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns).
+> 💡 **先开流：** 在发送消息*之前*（或同时）打开流。流只会投递打开之后发生的事件 —— 先发送再开流，早期事件会缓冲成一批到达。见 [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns)。
 
 ---
 
-## Stream Events (SSE)
+## 流式事件（SSE）
 
 ```go
 // Open the stream first, then send the user message
@@ -202,9 +202,9 @@ if err := stream.Err(); err != nil {
 }
 ```
 
-### Reconnecting and Tailing
+### 重连与跟踪
 
-When reconnecting mid-session, list past events first to dedupe, then tail live events:
+中途重连 session 时，先列出历史事件去重，再跟踪实时事件：
 
 ```go
 stream := client.Beta.Sessions.Events.StreamEvents(ctx, session.ID, anthropic.BetaSessionEventStreamParams{})
@@ -244,13 +244,13 @@ if err := stream.Err(); err != nil {
 
 ---
 
-## Provide Custom Tool Result
+## 提供自定义工具结果
 
-> ℹ️ The Go managed-agents bindings for `user.custom_tool_result` are not yet documented in this skill or in the apps source examples. Refer to `shared/managed-agents-events.md` for the wire format and the `github.com/anthropics/anthropic-sdk-go` repository for the corresponding Go params types.
+> ℹ️ Go 的 managed-agents 对 `user.custom_tool_result` 的绑定尚未在本 skill 或 apps 源码示例中文档化。线格式见 `shared/managed-agents-events.md`，对应的 Go params 类型见 `github.com/anthropics/anthropic-sdk-go` 仓库。
 
 ---
 
-## Poll Events
+## 轮询事件
 
 ```go
 // Auto-paginating iterator
@@ -266,7 +266,7 @@ if err := iter.Err(); err != nil {
 
 ---
 
-## Upload a File
+## 上传文件
 
 ```go
 csvFile, err := os.Open("data.csv")
@@ -302,7 +302,7 @@ if err != nil {
 }
 ```
 
-### Add and Manage Resources on an Existing Session
+### 在已有 Session 上添加与管理资源
 
 ```go
 // Attach an additional file to an open session
@@ -336,13 +336,13 @@ if _, err := client.Beta.Sessions.Resources.Delete(ctx, resource.ID, anthropic.B
 
 ---
 
-## List and Download Session Files
+## 列出并下载 Session 文件
 
-> ℹ️ Listing and downloading files an agent wrote during a session is not yet documented for Go in this skill or in the apps source examples. See `shared/managed-agents-events.md` and the `github.com/anthropics/anthropic-sdk-go` repository for the `Beta.Files.List` and `Beta.Files.Download` Go params types.
+> ℹ️ 列出并下载 agent 在 session 期间写入的文件，目前尚未在本 skill 或 apps 源码示例中为 Go 文档化。见 `shared/managed-agents-events.md` 以及 `github.com/anthropics/anthropic-sdk-go` 仓库中的 `Beta.Files.List` 与 `Beta.Files.Download` Go params 类型。
 
 ---
 
-## Session Management
+## Session 管理
 
 ```go
 // List environments
@@ -378,7 +378,7 @@ if err != nil {
 
 ---
 
-## MCP Server Integration
+## MCP 服务器集成
 
 ```go
 // Agent declares MCP server (no auth here — auth goes in a vault)
@@ -428,7 +428,7 @@ if err != nil {
 }
 ```
 
-See `shared/managed-agents-tools.md` §Vaults for creating vaults and adding credentials.
+创建 vault 与添加凭据见 `shared/managed-agents-tools.md` 的 Vaults 一节。
 
 ---
 
@@ -499,9 +499,9 @@ if err != nil {
 
 ---
 
-## GitHub Repository Integration
+## GitHub 仓库集成
 
-Mount a GitHub repository as a session resource (a vault holds the GitHub MCP credential):
+将 GitHub 仓库挂载为 session 资源（vault 保存 GitHub MCP 凭据）：
 
 ```go
 session, err := client.Beta.Sessions.New(ctx, anthropic.BetaSessionNewParams{
@@ -524,7 +524,7 @@ if err != nil {
 }
 ```
 
-Multiple repositories on the same session:
+同一 session 上挂载多个仓库：
 
 ```go
 resources := []anthropic.BetaSessionNewParamsResourceUnion{
@@ -547,7 +547,7 @@ resources := []anthropic.BetaSessionNewParamsResourceUnion{
 }
 ```
 
-Rotating a repository's authorization token:
+轮换仓库的授权令牌：
 
 ```go
 listed, err := client.Beta.Sessions.Resources.List(ctx, session.ID, anthropic.BetaSessionResourceListParams{})

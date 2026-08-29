@@ -1,20 +1,20 @@
 # Claude API — TypeScript
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-| Feature | Namespace | Key types / call |
+| 功能 | 命名空间 | 关键类型 / 调用 |
 |---|---|---|
-| User profiles | beta | `client.beta.userProfiles.create(...)` / `.retrieve(id)` / `.list()`. Pass the returned profile id on `client.beta.messages.create`. Requires a beta header — check the SDK's beta-headers reference for the current flag. |
+| 用户画像 | beta | `client.beta.userProfiles.create(...)` / `.retrieve(id)` / `.list()`。把返回的 profile id 传给 `client.beta.messages.create`。需要 beta 头 —— 请查看 SDK 的 beta-headers 参考以获取当前标志。 |
 
-## Installation
+## 安装
 
 ```bash
 npm install @anthropic-ai/sdk
 ```
 
-> **Reading local files (ESM):** `__dirname` and `__filename` are **undefined** in ES modules — using either throws `ReferenceError: __dirname is not defined` at runtime. For cwd-relative reads, pass the bare relative path (`fs.readFileSync("./sample.png")`). For script-relative paths, derive the directory from `import.meta.url`: `const here = path.dirname(fileURLToPath(import.meta.url))`. Never write `path.join(__dirname, …)` in an ESM `.ts` file.
+> **读取本地文件（ESM）：** 在 ES 模块中 `__dirname` 和 `__filename` **未定义** —— 使用任一者都会在运行时抛出 `ReferenceError: __dirname is not defined`。相对当前工作目录读取时，直接传相对路径（`fs.readFileSync("./sample.png")`）。相对脚本路径时，从 `import.meta.url` 推导目录：`const here = path.dirname(fileURLToPath(import.meta.url))`。永远不要在 ESM `.ts` 文件里写 `path.join(__dirname, …)`。
 
-## Client Initialization
+## 初始化客户端
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
@@ -30,7 +30,7 @@ const client = new Anthropic({ apiKey: "your-api-key" });
 
 ---
 
-## Basic Message Request
+## 基础消息请求
 
 ```typescript
 const response = await client.messages.create({
@@ -49,7 +49,7 @@ for (const block of response.content) {
 
 ---
 
-## System Prompts
+## 系统提示
 
 ```typescript
 const response = await client.messages.create({
@@ -61,9 +61,9 @@ const response = await client.messages.create({
 });
 ```
 
-### Mid-conversation system messages (model-gated)
+### 对话中途的系统消息（受模型支持限制）
 
-For operator instructions that arrive mid-conversation (mode switches, injected state), append `{role: "system", ...}` to `messages` instead of editing top-level `system` — this preserves the cached prefix and carries operator authority. Must follow a user message (or an `assistant` message ending in server-tool use), and must be either the last entry in `messages` or be followed by an `assistant` turn; cannot be `messages[0]`. Unsupported models return a 400 (`role 'system' is not supported on this model`). See `shared/prompt-caching.md` for when to use this vs. top-level `system`.
+对于对话中途到达的操作员指令（模式切换、注入状态），请向 `messages` 追加 `{role: "system", ...}`，而不是修改顶层 `system` —— 这样能保留已缓存的前缀，并带有操作员权限。必须跟在用户消息（或以服务端工具调用结束的 `assistant` 消息）之后，且必须是 `messages` 的最后一项，或后面再跟一轮 `assistant`；不能是 `messages[0]`。不支持的模型会返回 400（`role 'system' is not supported on this model`）。何时用这种方式、何时用顶层 `system`，见 `shared/prompt-caching.md`。
 
 ```typescript
 // No beta header needed — use regular client.messages.create.
@@ -83,7 +83,7 @@ const response = await client.messages.create({
 
 ---
 
-## Vision (Images)
+## 视觉（图片）
 
 ### URL
 
@@ -133,13 +133,13 @@ const response = await client.messages.create({
 
 ---
 
-## Prompt Caching
+## 提示缓存
 
-**Caching is a prefix match** — any byte change anywhere in the prefix invalidates everything after it. For placement patterns, architectural guidance (frozen system prompt, deterministic tool order, where to put volatile content), and the silent-invalidator audit checklist, read `shared/prompt-caching.md`.
+**缓存按前缀匹配** —— 前缀中任意字节变化都会使之后的全部缓存失效。关于放置模式、架构建议（冻结系统提示、确定性工具顺序、易变内容放哪里）以及静默失效审计清单，请阅读 `shared/prompt-caching.md`。
 
-### Automatic Caching (Recommended)
+### 自动缓存（推荐）
 
-Use top-level `cache_control` to automatically cache the last cacheable block in the request:
+使用顶层 `cache_control` 即可自动缓存请求中最后一个可缓存块：
 
 ```typescript
 const response = await client.messages.create({
@@ -151,9 +151,9 @@ const response = await client.messages.create({
 });
 ```
 
-### Manual Cache Control
+### 手动缓存控制
 
-For fine-grained control, add `cache_control` to specific content blocks:
+需要细粒度控制时，给特定内容块添加 `cache_control`：
 
 ```typescript
 const response = await client.messages.create({
@@ -184,7 +184,7 @@ const response2 = await client.messages.create({
 });
 ```
 
-### Verifying Cache Hits
+### 验证缓存命中
 
 ```typescript
 console.log(response.usage.cache_creation_input_tokens); // tokens written to cache (~1.25x cost)
@@ -192,15 +192,15 @@ console.log(response.usage.cache_read_input_tokens);     // tokens served from c
 console.log(response.usage.input_tokens);                // uncached tokens (full cost)
 ```
 
-If `cache_read_input_tokens` is zero across repeated identical-prefix requests, a silent invalidator is at work — `Date.now()` or a UUID in the system prompt, non-deterministic key ordering, or a varying tool set. See `shared/prompt-caching.md` for the full audit table.
+若在前缀相同的重复请求中 `cache_read_input_tokens` 始终为零，说明存在静默失效因素 —— 例如系统提示里的 `Date.now()` 或 UUID、非确定性的键顺序，或变化的工具集。完整审计表见 `shared/prompt-caching.md`。
 
 ---
 
-## Extended Thinking
+## 扩展思考
 
-> **Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking. `budget_tokens` is removed on Fable 5, Claude Opus 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
-> **Claude Opus 5:** thinking is on by default — omitting `thinking` runs adaptive (`{ type: "adaptive" }` is equivalent), unlike Opus 4.8/4.7 where omitting it meant no thinking. `{ type: "disabled" }` is accepted only at effort `high` or lower; pairing it with `xhigh`/`max` returns a 400.
-> **Older models:** Use `thinking: {type: "enabled", budget_tokens: N}` (must be < `max_tokens`, min 1024).
+> **Fable 5、Claude Opus 5、Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6：** 使用自适应思考。`budget_tokens` 在 Fable 5、Claude Opus 5、Opus 4.8 和 4.7 上已移除（发送会返回 400）；在 Opus 4.6 和 Sonnet 4.6 上已弃用。
+> **Claude Opus 5：** 默认开启思考 —— 省略 `thinking` 会走自适应（等价于 `{ type: "adaptive" }`），这与 Opus 4.8/4.7 不同（后者省略即表示不思考）。`{ type: "disabled" }` 仅在 effort 为 `high` 或更低时接受；与 `xhigh`/`max` 搭配会返回 400。
+> **较旧模型：** 使用 `thinking: {type: "enabled", budget_tokens: N}`（必须小于 `max_tokens`，最小 1024）。
 
 ```typescript
 // Fable 5 / Claude Opus 5 / Opus 4.8 / 4.7 / 4.6: adaptive thinking (recommended)
@@ -225,9 +225,9 @@ for (const block of response.content) {
 
 ---
 
-## Error Handling
+## 错误处理
 
-Use the SDK's typed exception classes — never check error messages with string matching:
+使用 SDK 的类型化异常类 —— 不要用字符串匹配检查错误消息：
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
@@ -247,13 +247,13 @@ try {
 }
 ```
 
-All classes extend `Anthropic.APIError` with a typed `status` field. Check from most specific to least specific. See [shared/error-codes.md](../../shared/error-codes.md) for the full error code reference.
+所有类都继承带有类型化 `status` 字段的 `Anthropic.APIError`。从最具体到最宽泛依次检查。完整错误码参考见 [shared/error-codes.md](../../shared/error-codes.md)。
 
 ---
 
-## Multi-Turn Conversations
+## 多轮对话
 
-The API is stateless — send the full conversation history each time. Use `Anthropic.MessageParam[]` to type the messages array:
+API 是无状态的 —— 每次都要发送完整对话历史。用 `Anthropic.MessageParam[]` 为消息数组标注类型：
 
 ```typescript
 const messages: Anthropic.MessageParam[] = [
@@ -269,17 +269,17 @@ const response = await client.messages.create({
 });
 ```
 
-**Rules:**
+**规则：**
 
-- Consecutive same-role messages are allowed — the API combines them into a single turn
-- First message must be `user`
-- Use SDK types (`Anthropic.MessageParam`, `Anthropic.Message`, `Anthropic.Tool`, etc.) for all API data structures — don't redefine equivalent interfaces
+- 允许连续相同角色的消息 —— API 会把它们合并为同一轮
+- 第一条消息必须是 `user`
+- 所有 API 数据结构都使用 SDK 类型（`Anthropic.MessageParam`、`Anthropic.Message`、`Anthropic.Tool` 等）—— 不要重新定义等价接口
 
 ---
 
-### Compaction (long conversations)
+### 压缩（长对话）
 
-> **Beta, Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6.** When conversations approach the 200K context window, compaction automatically summarizes earlier context server-side. The API returns a `compaction` block; you must pass it back on subsequent requests — append `response.content`, not just the text.
+> **Beta，Fable 5、Claude Opus 5、Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6。** 当对话接近 200K 上下文窗口时，压缩会在服务端自动总结更早的上下文。API 会返回 `compaction` 块；后续请求必须把它传回去 —— 追加 `response.content`，而不是只追加文本。
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
@@ -317,22 +317,22 @@ console.log(await chat("Now add rate limiting and error handling"));
 
 ---
 
-## Stop Reasons
+## 停止原因
 
-The `stop_reason` field in the response indicates why the model stopped generating:
+响应中的 `stop_reason` 字段说明模型为何停止生成：
 
-| Value           | Meaning                                                         |
+| 值           | 含义                                                         |
 | --------------- | --------------------------------------------------------------- |
-| `end_turn`      | Claude finished its response naturally                          |
-| `max_tokens`    | Hit the `max_tokens` limit — increase it or use streaming       |
-| `stop_sequence` | Hit a custom stop sequence                                      |
-| `tool_use`      | Claude wants to call a tool — execute it and continue           |
-| `pause_turn`    | Model paused and can be resumed (agentic flows)                 |
-| `refusal`       | Claude refused for safety reasons — check `stop_details`        |
+| `end_turn`      | Claude 自然结束了回复                          |
+| `max_tokens`    | 达到 `max_tokens` 上限 —— 请增大该值或使用流式输出       |
+| `stop_sequence` | 命中自定义停止序列                                      |
+| `tool_use`      | Claude 想调用工具 —— 执行后继续           |
+| `pause_turn`    | 模型暂停，可恢复（智能体流程）                 |
+| `refusal`       | Claude 因安全原因拒绝 —— 查看 `stop_details`        |
 
-### Structured Stop Details
+### 结构化停止详情
 
-When `stop_reason` is `"refusal"`, the response includes a `stop_details` object with structured information about the refusal:
+当 `stop_reason` 为 `"refusal"` 时，响应会包含带有结构化拒绝信息的 `stop_details` 对象：
 
 ```typescript
 if (response.stop_reason === "refusal" && response.stop_details) {
@@ -341,9 +341,9 @@ if (response.stop_reason === "refusal" && response.stop_details) {
 }
 ```
 
-### Refusal Fallbacks (Claude Fable 5) — opt in by default
+### 拒绝回退（Claude Fable 5）—— 默认建议选择加入
 
-Fallbacks are **opt-in**: without them a refused request simply stops. Include the server-side `fallbacks` parameter in `claude-fable-5` code by default — on a policy decline the API re-runs the same request on the fallback model inside the same call. A decline before any output isn't billed (a mid-stream decline bills the streamed partial); the rescue bills at the fallback model's own rates, with cache repricing applied automatically.
+回退是**选择加入**的：没有它时，被拒绝的请求会直接停止。在 `claude-fable-5` 代码中默认加入服务端 `fallbacks` 参数 —— 策略拒绝时，API 会在同一次调用内用回退模型重新执行同一请求。若在产生任何输出前被拒绝则不计费（流式中途拒绝会按已流出的部分计费）；救援请求按回退模型自身费率计费，缓存重计价会自动应用。
 
 ```typescript
 const response = await client.beta.messages.create({
@@ -371,13 +371,13 @@ if (fallbackRan && response.stop_reason !== "refusal") {
 }
 ```
 
-A `stop_reason: "refusal"` on the final response means the whole chain refused. The header must be exactly `server-side-fallback-2026-06-01` **for this array form**; the newer `fallbacks: "default"` scalar form uses `server-side-fallback-2026-07-01` instead (see `shared/model-migration.md` → Migrating to Claude Opus 5 → New API features), and pairing either header with the other form returns a 400. The parameter is rejected on the Batches API and unavailable on Amazon Bedrock, Vertex AI, and Microsoft Foundry — register the client-side `betaRefusalFallbackMiddleware` on the client there instead. Full semantics (sticky routing, billing, streaming, echoing fallback turns back): `shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason.
+最终响应上的 `stop_reason: "refusal"` 表示整条链路都拒绝了。该数组形式的请求头必须恰好是 `server-side-fallback-2026-06-01`；较新的标量形式 `fallbacks: "default"` 则使用 `server-side-fallback-2026-07-01`（见 `shared/model-migration.md` → Migrating to Claude Opus 5 → New API features），把头与另一种形式混用会返回 400。该参数在 Batches API 上会被拒绝，且在 Amazon Bedrock、Vertex AI 和 Microsoft Foundry 上不可用 —— 在这些平台上请改为在客户端注册客户端侧的 `betaRefusalFallbackMiddleware`。完整语义（粘性路由、计费、流式、回传回退轮次）：`shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason。
 
 ---
 
-## Cost Optimization Strategies
+## 成本优化策略
 
-### 1. Use Prompt Caching for Repeated Context
+### 1. 对重复上下文使用提示缓存
 
 ```typescript
 // Automatic caching (simplest — caches the last cacheable block)
@@ -393,7 +393,7 @@ const response = await client.messages.create({
 // Subsequent requests: ~90% cheaper for cached portion
 ```
 
-### 2. Use Token Counting Before Requests
+### 2. 请求前先做 Token 计数
 
 ```typescript
 const countResponse = await client.messages.countTokens({

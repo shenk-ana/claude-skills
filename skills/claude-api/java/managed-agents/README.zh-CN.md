@@ -1,12 +1,12 @@
 # Managed Agents — Java
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Bindings not shown here:** This README covers the most common managed-agents flows for Java. If you need a class, method, namespace, field, or behavior that isn't shown, WebFetch the Java SDK repo **or the relevant docs page** from `shared/live-sources.md` rather than guess. Do not extrapolate from cURL shapes or another language's SDK.
+> **此处未列出的绑定：** 本 README 覆盖 Java 上最常见的 managed-agents 流程。若需要未展示的类、方法、命名空间、字段或行为，请 WebFetch Java SDK 仓库 **或** `shared/live-sources.md` 中的相关文档页，不要猜测。不要从 cURL 形态或其他语言的 SDK 外推。
 
-> **Agents are persistent — create once, reference by ID.** Store the agent ID returned by `client.beta().agents().create` and pass it to every subsequent `client.beta().sessions().create`; do not call `agents().create` in the request path. **Recommended:** define agents and environments as version-controlled YAML applied with the `ant` CLI — see `shared/anthropic-cli.md` (its live-docs URL is in `shared/live-sources.md`). The CLI owns the control plane (create/update); your code owns the data plane (sessions with the stored ID). The examples below show in-code creation for when you must provision programmatically; in production the create call belongs in setup, not in the request path.
+> **Agent 是持久的 —— 创建一次，之后用 ID 引用。** 保存 `client.beta().agents().create` 返回的 agent ID，并在后续每次 `client.beta().sessions().create` 中传入；不要在请求路径里调用 `agents().create`。**推荐：** 将 agent 和环境定义为纳入版本控制的 YAML，并用 `ant` CLI 应用 —— 见 `shared/anthropic-cli.md`（其在线文档 URL 在 `shared/live-sources.md`）。CLI 负责控制面（创建/更新）；你的代码负责数据面（用已保存的 ID 开 session）。下面的示例展示必须用代码预配时的创建方式；生产环境中，创建调用应放在初始化阶段，而不是请求路径里。
 
-## Installation
+## 安装
 
 ```xml
 <dependency>
@@ -15,7 +15,7 @@
 </dependency>
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```java
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
@@ -26,7 +26,7 @@ var client = AnthropicOkHttpClient.fromEnv();
 
 ---
 
-## Create an Environment
+## 创建环境
 
 ```java
 import com.anthropic.models.beta.environments.BetaCloudConfigParams;
@@ -44,11 +44,11 @@ System.out.println("Environment ID: " + environment.id()); // env_...
 
 ---
 
-## Create an Agent (required first step)
+## 创建 Agent（必做的第一步）
 
-> ⚠️ **There is no inline agent config.** Model, system, and tools live on the agent object, not the session. Always start with `client.beta().agents().create()` — the session takes either `.agent(agent.id())` or the typed `BetaManagedAgentsAgentParams.builder()...build()`.
+> ⚠️ **没有内联 agent 配置。** model、system 和 tools 在 agent 对象上，不在 session 上。始终先调用 `client.beta().agents().create()` —— session 接收 `.agent(agent.id())` 或类型化的 `BetaManagedAgentsAgentParams.builder()...build()`。
 
-### Minimal
+### 最小示例
 
 ```java
 import com.anthropic.models.beta.agents.AgentCreateParams;
@@ -80,9 +80,9 @@ System.out.println("Session ID: " + session.id());
 System.out.println("Trace: https://platform.claude.com/workspaces/default/sessions/" + session.id()); // swap 'default' for your workspace ID if the API key is not in the Default workspace
 ```
 
-### Updating an Agent
+### 更新 Agent
 
-Updates create new versions; the agent object is immutable per version.
+更新会创建新版本；每个版本的 agent 对象不可变。
 
 ```java
 import com.anthropic.models.beta.agents.AgentUpdateParams;
@@ -105,7 +105,7 @@ System.out.println("Archived at: " + archived.archivedAt().orElseThrow());
 
 ---
 
-## Send a User Message
+## 发送用户消息
 
 ```java
 import com.anthropic.models.beta.sessions.events.BetaManagedAgentsUserMessageEventParams;
@@ -119,11 +119,11 @@ client.beta().sessions().events().send(session.id(), EventSendParams.builder()
     .build());
 ```
 
-> 💡 **Stream-first:** Open the stream *before* (or concurrently with) sending the message. The stream only delivers events that occur after it opens — stream-after-send means early events arrive buffered in one batch. See [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns).
+> 💡 **先开流：** 在发送消息*之前*（或同时）打开流。流只会投递打开之后发生的事件 —— 先发送再开流，早期事件会缓冲成一批到达。见 [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns)。
 
 ---
 
-## Stream Events (SSE)
+## 流式事件（SSE）
 
 ```java
 import com.anthropic.models.beta.sessions.events.StreamEvents;
@@ -152,9 +152,9 @@ try (var stream = client.beta().sessions().events().streamStreaming(session.id()
 }
 ```
 
-### Reconnecting and Tailing
+### 重连与跟踪
 
-When reconnecting mid-session, list past events first to dedupe, then tail live events. The cross-variant `id` field is read from the raw `_json()` value:
+中途重连 session 时，先列出历史事件去重，再跟踪实时事件。跨变体的 `id` 字段从原始 `_json()` 值读取：
 
 ```java
 import com.anthropic.core.JsonValue;
@@ -185,13 +185,13 @@ try (var stream = client.beta().sessions().events().streamStreaming(session.id()
 
 ---
 
-## Provide Custom Tool Result
+## 提供自定义工具结果
 
-> ℹ️ The Java managed-agents bindings for `user.custom_tool_result` are not yet documented in this skill or in the apps source examples. Refer to `shared/managed-agents-events.md` for the wire format and the `anthropic-java` repository for the corresponding params types.
+> ℹ️ Java 的 managed-agents 对 `user.custom_tool_result` 的绑定尚未在本 skill 或 apps 源码示例中文档化。线格式见 `shared/managed-agents-events.md`，对应的 params 类型见 `anthropic-java` 仓库。
 
 ---
 
-## Poll Events
+## 轮询事件
 
 ```java
 for (var event : client.beta().sessions().events().list(session.id()).autoPager()) {
@@ -201,7 +201,7 @@ for (var event : client.beta().sessions().events().list(session.id()).autoPager(
 
 ---
 
-## Upload a File
+## 上传文件
 
 ```java
 import com.anthropic.models.beta.files.FileUploadParams;
@@ -227,7 +227,7 @@ var session = client.beta().sessions().create(SessionCreateParams.builder()
     .build());
 ```
 
-### Add and Manage Resources on an Existing Session
+### 在已有 Session 上添加与管理资源
 
 ```java
 import com.anthropic.models.beta.sessions.resources.ResourceAddParams;
@@ -262,13 +262,13 @@ client.beta().sessions().resources().delete(resource.id(), ResourceDeleteParams.
 
 ---
 
-## List and Download Session Files
+## 列出并下载 Session 文件
 
-> ℹ️ Listing and downloading files an agent wrote during a session is not yet documented for Java in this skill or in the apps source examples. See `shared/managed-agents-events.md` and the `anthropic-java` repository for the file list/download bindings.
+> ℹ️ 列出并下载 agent 在 session 期间写入的文件，目前尚未在本 skill 或 apps 源码示例中为 Java 文档化。见 `shared/managed-agents-events.md` 以及 `anthropic-java` 仓库中的文件列表/下载绑定。
 
 ---
 
-## Session Management
+## Session 管理
 
 ```java
 // List environments
@@ -289,7 +289,7 @@ client.beta().sessions().delete(session.id());
 
 ---
 
-## MCP Server Integration
+## MCP 服务器集成
 
 ```java
 import com.anthropic.models.beta.agents.BetaManagedAgentsMcpToolsetParams;
@@ -325,7 +325,7 @@ var session = client.beta().sessions().create(SessionCreateParams.builder()
     .build());
 ```
 
-See `shared/managed-agents-tools.md` §Vaults for creating vaults and adding credentials.
+创建 vault 与添加凭据见 `shared/managed-agents-tools.md` 的 Vaults 一节。
 
 ---
 
@@ -390,9 +390,9 @@ client.beta().vaults().archive(vault.id());
 
 ---
 
-## GitHub Repository Integration
+## GitHub 仓库集成
 
-Mount a GitHub repository as a session resource (a vault holds the GitHub MCP credential):
+将 GitHub 仓库挂载为 session 资源（vault 保存 GitHub MCP 凭据）：
 
 ```java
 import com.anthropic.models.beta.sessions.BetaManagedAgentsGitHubRepositoryResourceParams;
@@ -410,7 +410,7 @@ var session = client.beta().sessions().create(SessionCreateParams.builder()
     .build());
 ```
 
-Multiple repositories on the same session:
+同一 session 上挂载多个仓库：
 
 ```java
 import java.util.List;
@@ -430,7 +430,7 @@ var resources = List.of(
         .build());
 ```
 
-Rotating a repository's authorization token:
+轮换仓库的授权令牌：
 
 ```java
 import com.anthropic.models.beta.sessions.resources.ResourceUpdateParams;

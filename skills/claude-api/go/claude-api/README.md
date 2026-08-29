@@ -1,5 +1,7 @@
 # Claude API — Go
 
+> **English** | [中文](./README.zh-CN.md)
+
 > **Note:** The Go SDK supports the Claude API and beta tool use with `BetaToolRunner`. Agent SDK is not yet available for Go.
 
 ## Installation

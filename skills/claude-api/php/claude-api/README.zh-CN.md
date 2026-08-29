@@ -1,16 +1,16 @@
 # Claude API — PHP
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Note:** The PHP SDK is the official Anthropic SDK for PHP. A beta tool runner is available via `$client->beta->messages->toolRunner()`. Structured output helpers are supported via `StructuredOutputModel` classes. Agent SDK is not available. Bedrock, Vertex AI, and Foundry clients are supported.
+> **说明：** PHP SDK 是 Anthropic 官方 PHP SDK。可通过 `$client->beta->messages->toolRunner()` 使用 beta 工具运行器。结构化输出辅助通过 `StructuredOutputModel` 类支持。Agent SDK 不可用。支持 Bedrock、Vertex AI 和 Foundry 客户端。
 
-## Installation
+## 安装
 
 ```bash
 composer require "anthropic-ai/sdk"
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```php
 use Anthropic\Client;
@@ -28,7 +28,7 @@ use Anthropic\Bedrock\MantleClient;
 $client = new MantleClient(awsRegion: 'us-east-1');
 ```
 
-Model IDs on Bedrock take an `anthropic.` prefix — e.g. `model: 'anthropic.claude-opus-5'`.
+Bedrock 上的模型 ID 带有 `anthropic.` 前缀 —— 例如 `model: 'anthropic.claude-opus-5'`。
 
 ### Google Vertex AI
 
@@ -56,7 +56,7 @@ $client = Foundry\Client::withCredentials(
 
 ---
 
-## Basic Message Request
+## 基础消息请求
 
 ```php
 $message = $client->messages->create(
@@ -78,7 +78,7 @@ foreach ($message->content as $block) {
 }
 ```
 
-If you only want the first text block:
+若只要第一个文本块：
 
 ```php
 foreach ($message->content as $block) {
@@ -91,9 +91,9 @@ foreach ($message->content as $block) {
 
 ---
 
-## Extended Thinking
+## 扩展思考
 
-**Adaptive thinking is the recommended mode for Claude 4.6+ models.** Claude decides dynamically when and how much to think.
+**对 Claude 4.6+ 模型，推荐使用自适应思考。** Claude 会动态决定何时思考、思考多少。
 
 ```php
 use Anthropic\Messages\ThinkingBlock;
@@ -119,17 +119,17 @@ foreach ($message->content as $block) {
 }
 ```
 
-> **Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking (above). `['type' => 'enabled', 'budgetTokens' => N]` is removed on Fable 5, Claude Opus 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
-> **Claude Opus 5:** thinking is on by default — omitting `thinking:` runs adaptive (`['type' => 'adaptive']` is equivalent), unlike Opus 4.8/4.7 where omitting it meant no thinking. `['type' => 'disabled']` is accepted only at effort `high` or lower; pairing it with `xhigh`/`max` returns a 400.
-> **Older models:** Use `thinking: ['type' => 'enabled', 'budgetTokens' => N]` (budget must be < `maxTokens`, min 1024).
+> **Fable 5、Claude Opus 5、Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6：** 使用上述自适应思考。`['type' => 'enabled', 'budgetTokens' => N]` 在 Fable 5、Claude Opus 5、Opus 4.8 和 4.7 上已移除（发送会返回 400）；在 Opus 4.6 和 Sonnet 4.6 上已弃用。
+> **Claude Opus 5：** 默认开启思考 —— 省略 `thinking:` 会走自适应（等价于 `['type' => 'adaptive']`），这与 Opus 4.8/4.7 不同（后者省略即表示不思考）。`['type' => 'disabled']` 仅在 effort 为 `high` 或更低时接受；与 `xhigh`/`max` 搭配会返回 400。
+> **较旧模型：** 使用 `thinking: ['type' => 'enabled', 'budgetTokens' => N]`（budget 必须小于 `maxTokens`，最小 1024）。
 
-`$block->type === 'thinking'` also works for the check; `instanceof` narrows for PHPStan.
+`$block->type === 'thinking'` 同样可用于检查；`instanceof` 可收窄类型供 PHPStan 使用。
 
 ---
 
-## Prompt Caching
+## 提示缓存
 
-`system:` takes an array of text blocks; set `cacheControl` on the last block. Array-shape syntax (camelCase keys) is idiomatic. For placement patterns and the silent-invalidator audit checklist, see `shared/prompt-caching.md`.
+`system:` 接受文本块数组；在最后一个块上设置 `cacheControl`。数组形态语法（camelCase 键）是惯用写法。关于放置模式与静默失效审计清单，见 `shared/prompt-caching.md`。
 
 ```php
 $message = $client->messages->create(
@@ -142,15 +142,15 @@ $message = $client->messages->create(
 );
 ```
 
-For 1-hour TTL: `'cacheControl' => ['type' => 'ephemeral', 'ttl' => '1h']`. There's also a top-level `cacheControl:` on `messages->create(...)` that auto-places on the last cacheable block.
+1 小时 TTL：`'cacheControl' => ['type' => 'ephemeral', 'ttl' => '1h']`。`messages->create(...)` 上也有顶层 `cacheControl:`，会自动放到最后一个可缓存块上。
 
-Verify hits via `$message->usage->cacheCreationInputTokens` / `$message->usage->cacheReadInputTokens`.
+通过 `$message->usage->cacheCreationInputTokens` / `$message->usage->cacheReadInputTokens` 验证命中。
 
 ---
 
-## Stop Details
+## 停止详情
 
-When `stopReason` is `'refusal'`, the response includes structured `stopDetails`:
+当 `stopReason` 为 `'refusal'` 时，响应会包含结构化的 `stopDetails`：
 
 ```php
 if ($message->stopReason === 'refusal' && $message->stopDetails !== null) {
@@ -159,13 +159,13 @@ if ($message->stopReason === 'refusal' && $message->stopDetails !== null) {
 }
 ```
 
-**Refusal fallbacks (Claude Fable 5) — opt in by default.** Fallbacks are opt-in: without them a refused request simply stops. New `claude-fable-5` code should include the server-side `fallbacks` parameter (beta header `server-side-fallback-2026-06-01`, fallback model `claude-opus-4-8`, on the beta messages call) by default. The exact PHP binding (and the client-side middleware for providers without server-side support) is not documented here — WebFetch the PHP SDK repo's `examples/` from `shared/live-sources.md`; full semantics in `shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason.
+**拒绝回退（Claude Fable 5）—— 默认建议选择加入。** 回退是选择加入的：没有它时，被拒绝的请求会直接停止。新的 `claude-fable-5` 代码默认应包含服务端 `fallbacks` 参数（beta 头 `server-side-fallback-2026-06-01`，回退模型 `claude-opus-4-8`，在 beta messages 调用上）。确切的 PHP 绑定（以及无服务端支持的提供商所用的客户端侧中间件）此处未文档化 —— 从 `shared/live-sources.md` WebFetch PHP SDK 仓库的 `examples/`；完整语义见 `shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason。
 
 ---
 
-## Error Type
+## 错误类型
 
-`APIStatusException` exposes a `->type` property for programmatic error classification:
+`APIStatusException` 暴露 `->type` 属性，用于程序化错误分类：
 
 ```php
 try {
