@@ -1,14 +1,14 @@
 # Claude API — Python
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-## Installation
+## 安装
 
 ```bash
 pip install anthropic
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```python
 import anthropic
@@ -27,11 +27,11 @@ async_client = anthropic.AsyncAnthropic()
 
 ---
 
-## Client Configuration
+## 客户端配置
 
-### Per-request overrides
+### 单次请求覆盖
 
-Use `with_options()` to override client settings for a single call without mutating the client:
+使用 `with_options()` 可在不修改客户端本身的情况下，覆盖单次调用的设置：
 
 ```python
 client.with_options(timeout=5.0, max_retries=5).messages.create(
@@ -41,9 +41,9 @@ client.with_options(timeout=5.0, max_retries=5).messages.create(
 )
 ```
 
-### Timeouts
+### 超时
 
-Default request timeout is 10 minutes. Pass a float (seconds) or an `anthropic.Timeout` for granular control. On timeout the SDK raises `anthropic.APITimeoutError` (and retries per `max_retries`).
+默认请求超时为 10 分钟。可传入浮点数（秒）或 `anthropic.Timeout` 做更细粒度控制。超时后 SDK 会抛出 `anthropic.APITimeoutError`（并按 `max_retries` 重试）。
 
 ```python
 client = anthropic.Anthropic(timeout=20.0)
@@ -52,15 +52,15 @@ client = anthropic.Anthropic(
 )
 ```
 
-`anthropic` 1.x is built on [`httpx2`](https://pypi.org/project/httpx2/), not `httpx`. `anthropic.Timeout` is `httpx2.Timeout`; if you import the HTTP library yourself, write `import httpx2 as httpx` — an object from the `httpx` package (`httpx.Timeout`, `httpx.Client`, transports, limits) is rejected or fails at request time. Existing `httpx`-era code is covered by the [v1 migration guide](https://github.com/anthropics/anthropic-sdk-python/blob/main/MIGRATION.md) and `/claude-api upgrade python`.
+`anthropic` 1.x 基于 [`httpx2`](https://pypi.org/project/httpx2/)，而不是 `httpx`。`anthropic.Timeout` 即 `httpx2.Timeout`；若自行导入 HTTP 库，请写 `import httpx2 as httpx` —— 来自 `httpx` 包的对象（`httpx.Timeout`、`httpx.Client`、transport、limits）会被拒绝，或在请求时失败。既有 `httpx` 时代代码见 [v1 迁移指南](https://github.com/anthropics/anthropic-sdk-python/blob/main/MIGRATION.md) 以及 `/claude-api upgrade python`。
 
-### Retries
+### 重试
 
-The SDK auto-retries connection errors, 408, 409, 429, and ≥500 with exponential backoff (default 2 retries). Set `max_retries` on the client or via `with_options()`; `max_retries=0` disables.
+SDK 会以指数退避自动重试连接错误、408、409、429 以及 ≥500（默认重试 2 次）。可在客户端上或通过 `with_options()` 设置 `max_retries`；`max_retries=0` 表示禁用。
 
-### Async performance (aiohttp backend)
+### 异步性能（aiohttp 后端）
 
-For high-concurrency async workloads, install `anthropic[aiohttp]` and pass `DefaultAioHttpClient` instead of the default httpx2 backend:
+高并发异步负载下，可安装 `anthropic[aiohttp]` 并传入 `DefaultAioHttpClient`，替代默认的 httpx2 后端：
 
 ```python
 from anthropic import AsyncAnthropic, DefaultAioHttpClient
@@ -69,9 +69,9 @@ async with AsyncAnthropic(http_client=DefaultAioHttpClient()) as client:
     ...
 ```
 
-### Custom HTTP client (proxy, base URL)
+### 自定义 HTTP 客户端（代理、基础 URL）
 
-Use `DefaultHttpxClient` / `DefaultAsyncHttpxClient` — not a raw `httpx2.Client` (and never a client from the `httpx` package) — so the SDK's default timeouts and connection limits are preserved:
+请使用 `DefaultHttpxClient` / `DefaultAsyncHttpxClient` —— 不要直接用裸的 `httpx2.Client`（更不要用 `httpx` 包里的客户端）—— 这样才能保留 SDK 默认的超时和连接限制：
 
 ```python
 from anthropic import Anthropic, DefaultHttpxClient
@@ -82,13 +82,13 @@ client = Anthropic(
 )
 ```
 
-### Logging
+### 日志
 
-Set `ANTHROPIC_LOG=debug` (or `info`) to enable SDK logging via the standard `logging` module.
+设置 `ANTHROPIC_LOG=debug`（或 `info`）可通过标准 `logging` 模块启用 SDK 日志。
 
 ---
 
-## Basic Message Request
+## 基础消息请求
 
 ```python
 response = client.messages.create(
@@ -107,7 +107,7 @@ for block in response.content:
 
 ---
 
-## System Prompts
+## 系统提示
 
 ```python
 response = client.messages.create(
@@ -118,9 +118,9 @@ response = client.messages.create(
 )
 ```
 
-### Mid-conversation system messages (model-gated)
+### 对话中途的系统消息（受模型支持限制）
 
-For operator instructions that arrive mid-conversation (mode switches, injected state), append `{"role": "system", ...}` to `messages` instead of editing top-level `system` — this preserves the cached prefix and carries operator authority. Must follow a user message (or an `assistant` message ending in server-tool use), and must be either the last entry in `messages` or be followed by an `assistant` turn; cannot be `messages[0]`. Unsupported models return a 400 (`role 'system' is not supported on this model`). See `shared/prompt-caching.md` for when to use this vs. top-level `system`.
+对于对话中途到达的操作员指令（模式切换、注入状态），请向 `messages` 追加 `{"role": "system", ...}`，而不是修改顶层 `system` —— 这样能保留已缓存的前缀，并带有操作员权限。必须跟在用户消息（或以服务端工具调用结束的 `assistant` 消息）之后，且必须是 `messages` 的最后一项，或后面再跟一轮 `assistant`；不能是 `messages[0]`。不支持的模型会返回 400（`role 'system' is not supported on this model`）。何时用这种方式、何时用顶层 `system`，见 `shared/prompt-caching.md`。
 
 ```python
 response = client.messages.create(
@@ -136,7 +136,7 @@ response = client.messages.create(
 
 ---
 
-## Vision (Images)
+## 视觉（图片）
 
 ### Base64
 
@@ -190,13 +190,13 @@ response = client.messages.create(
 
 ---
 
-## Prompt Caching
+## 提示缓存
 
-Cache large context to reduce costs (up to 90% savings). **Caching is a prefix match** — any byte change anywhere in the prefix invalidates everything after it. For placement patterns, architectural guidance (frozen system prompt, deterministic tool order, where to put volatile content), and the silent-invalidator audit checklist, read `shared/prompt-caching.md`.
+缓存大段上下文以降低成本（最高可节省约 90%）。**缓存按前缀匹配** —— 前缀中任意字节变化都会使之后的全部缓存失效。关于放置模式、架构建议（冻结系统提示、确定性工具顺序、易变内容放哪里）以及静默失效审计清单，请阅读 `shared/prompt-caching.md`。
 
-### Automatic Caching (Recommended)
+### 自动缓存（推荐）
 
-Use top-level `cache_control` to automatically cache the last cacheable block in the request — no need to annotate individual content blocks:
+使用顶层 `cache_control` 即可自动缓存请求中最后一个可缓存块，无需给各个内容块单独标注：
 
 ```python
 response = client.messages.create(
@@ -208,9 +208,9 @@ response = client.messages.create(
 )
 ```
 
-### Manual Cache Control
+### 手动缓存控制
 
-For fine-grained control, add `cache_control` to specific content blocks:
+需要细粒度控制时，给特定内容块添加 `cache_control`：
 
 ```python
 response = client.messages.create(
@@ -237,7 +237,7 @@ response = client.messages.create(
 )
 ```
 
-### Verifying Cache Hits
+### 验证缓存命中
 
 ```python
 print(response.usage.cache_creation_input_tokens)  # tokens written to cache (~1.25x cost)
@@ -245,15 +245,15 @@ print(response.usage.cache_read_input_tokens)      # tokens served from cache (~
 print(response.usage.input_tokens)                 # uncached tokens (full cost)
 ```
 
-If `cache_read_input_tokens` is zero across repeated identical-prefix requests, a silent invalidator is at work — `datetime.now()` or a UUID in the system prompt, unsorted `json.dumps()`, or a varying tool set. See `shared/prompt-caching.md` for the full audit table.
+若在前缀相同的重复请求中 `cache_read_input_tokens` 始终为零，说明存在静默失效因素 —— 例如系统提示里的 `datetime.now()` 或 UUID、未排序的 `json.dumps()`，或变化的工具集。完整审计表见 `shared/prompt-caching.md`。
 
 ---
 
-## Extended Thinking
+## 扩展思考
 
-> **Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6:** Use adaptive thinking. `budget_tokens` is removed on Fable 5, Claude Opus 5, Opus 4.8, and 4.7 (400 if sent); deprecated on Opus 4.6 and Sonnet 4.6.
-> **Claude Opus 5:** thinking is on by default — omitting `thinking` runs adaptive (`{"type": "adaptive"}` is equivalent), unlike Opus 4.8/4.7 where omitting it meant no thinking. `{"type": "disabled"}` is accepted only at effort `high` or lower; pairing it with `xhigh`/`max` returns a 400.
-> **Older models:** Use `thinking: {type: "enabled", budget_tokens: N}` (must be < `max_tokens`, min 1024).
+> **Fable 5、Claude Opus 5、Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6：** 使用自适应思考。`budget_tokens` 在 Fable 5、Claude Opus 5、Opus 4.8 和 4.7 上已移除（发送会返回 400）；在 Opus 4.6 和 Sonnet 4.6 上已弃用。
+> **Claude Opus 5：** 默认开启思考 —— 省略 `thinking` 会走自适应（等价于 `{"type": "adaptive"}`），这与 Opus 4.8/4.7 不同（后者省略即表示不思考）。`{"type": "disabled"}` 仅在 effort 为 `high` 或更低时接受；与 `xhigh`/`max` 搭配会返回 400。
+> **较旧模型：** 使用 `thinking: {type: "enabled", budget_tokens: N}`（必须小于 `max_tokens`，最小 1024）。
 
 ```python
 # Fable 5 / Claude Opus 5 / Opus 4.8 / 4.7 / 4.6: adaptive thinking (recommended)
@@ -275,7 +275,7 @@ for block in response.content:
 
 ---
 
-## Error Handling
+## 错误处理
 
 ```python
 import anthropic
@@ -304,9 +304,9 @@ except anthropic.APIConnectionError:
 
 ---
 
-## Response Helpers
+## 响应辅助方法
 
-Every response object exposes `_request_id` (populated from the `request-id` header) — log it when reporting failures to Anthropic. Despite the underscore prefix, this property is public.
+每个响应对象都暴露 `_request_id`（来自 `request-id` 响应头）—— 向 Anthropic 报告故障时请记录它。尽管有下划线前缀，该属性是公开的。
 
 ```python
 message = client.messages.create(...)
@@ -315,7 +315,7 @@ print(message.to_json())          # serialize the Pydantic model
 print(message.to_dict())          # plain dict
 ```
 
-To access raw headers or other response metadata, use `.with_raw_response`:
+要访问原始响应头或其他元数据，使用 `.with_raw_response`：
 
 ```python
 raw = client.messages.with_raw_response.create(
@@ -329,9 +329,9 @@ message = raw.parse()  # the Message object messages.create() would have returne
 
 ---
 
-## Multi-Turn Conversations
+## 多轮对话
 
-The API is stateless — send the full conversation history each time.
+API 是无状态的 —— 每次都要发送完整对话历史。
 
 ```python
 class ConversationManager:
@@ -373,17 +373,17 @@ response1 = conversation.send("My name is Alice.")
 response2 = conversation.send("What's my name?")  # Claude remembers "Alice"
 ```
 
-**Rules:**
+**规则：**
 
-- Consecutive same-role messages are allowed — the API combines them into a single turn
-- First message must be `user`
-- `role: "system"` messages are allowed mid-conversation on supporting models (no beta header needed) — see § Mid-conversation system messages above
+- 允许连续相同角色的消息 —— API 会把它们合并为同一轮
+- 第一条消息必须是 `user`
+- 在支持的模型上，对话中途允许 `role: "system"` 消息（无需 beta 头）—— 见上文「对话中途的系统消息」
 
 ---
 
-### Compaction (long conversations)
+### 压缩（长对话）
 
-> **Beta, Fable 5, Claude Opus 5, Opus 4.8, Opus 4.7, Opus 4.6, and Sonnet 4.6.** When conversations approach the 200K context window, compaction automatically summarizes earlier context server-side. The API returns a `compaction` block; you must pass it back on subsequent requests — append `response.content`, not just the text.
+> **Beta，Fable 5、Claude Opus 5、Opus 4.8、Opus 4.7、Opus 4.6 和 Sonnet 4.6。** 当对话接近 200K 上下文窗口时，压缩会在服务端自动总结更早的上下文。API 会返回 `compaction` 块；后续请求必须把它传回去 —— 追加 `response.content`，而不是只追加文本。
 
 ```python
 import anthropic
@@ -417,22 +417,22 @@ print(chat("Now add rate limiting and error handling"))
 
 ---
 
-## Stop Reasons
+## 停止原因
 
-The `stop_reason` field in the response indicates why the model stopped generating:
+响应中的 `stop_reason` 字段说明模型为何停止生成：
 
-| Value | Meaning |
+| 值 | 含义 |
 |-------|---------|
-| `end_turn` | Claude finished its response naturally |
-| `max_tokens` | Hit the `max_tokens` limit — increase it or use streaming |
-| `stop_sequence` | Hit a custom stop sequence |
-| `tool_use` | Claude wants to call a tool — execute it and continue |
-| `pause_turn` | Model paused and can be resumed (agentic flows) |
-| `refusal` | Claude refused for safety reasons — check `stop_details` |
+| `end_turn` | Claude 自然结束了回复 |
+| `max_tokens` | 达到 `max_tokens` 上限 —— 请增大该值或使用流式输出 |
+| `stop_sequence` | 命中自定义停止序列 |
+| `tool_use` | Claude 想调用工具 —— 执行后继续 |
+| `pause_turn` | 模型暂停，可恢复（智能体流程） |
+| `refusal` | Claude 因安全原因拒绝 —— 查看 `stop_details` |
 
-### Structured Stop Details
+### 结构化停止详情
 
-When `stop_reason` is `"refusal"`, the response includes a `stop_details` object with structured information about the refusal:
+当 `stop_reason` 为 `"refusal"` 时，响应会包含带有结构化拒绝信息的 `stop_details` 对象：
 
 ```python
 if response.stop_reason == "refusal" and response.stop_details:
@@ -440,9 +440,9 @@ if response.stop_reason == "refusal" and response.stop_details:
     print(f"Explanation: {response.stop_details.explanation}")
 ```
 
-### Refusal Fallbacks (Claude Fable 5) — opt in by default
+### 拒绝回退（Claude Fable 5）—— 默认建议选择加入
 
-Fallbacks are **opt-in**: without them a refused request simply stops. Include the server-side `fallbacks` parameter in `claude-fable-5` code by default — on a policy decline the API re-runs the same request on the fallback model inside the same call. A decline before any output isn't billed (a mid-stream decline bills the streamed partial); the rescue bills at the fallback model's own rates, with cache repricing applied automatically.
+回退是**选择加入**的：没有它时，被拒绝的请求会直接停止。在 `claude-fable-5` 代码中默认加入服务端 `fallbacks` 参数 —— 策略拒绝时，API 会在同一次调用内用回退模型重新执行同一请求。若在产生任何输出前被拒绝则不计费（流式中途拒绝会按已流出的部分计费）；救援请求按回退模型自身费率计费，缓存重计价会自动应用。
 
 ```python
 response = client.beta.messages.create(
@@ -467,13 +467,13 @@ if fallback_ran and response.stop_reason != "refusal":
     print(f"Served by {response.model}")
 ```
 
-A `stop_reason: "refusal"` on the final response means the whole chain refused. The header must be exactly `server-side-fallback-2026-06-01` **for this array form**; the newer `fallbacks: "default"` scalar form uses `server-side-fallback-2026-07-01` instead (see `shared/model-migration.md` → Migrating to Claude Opus 5 → New API features), and pairing either header with the other form returns a 400. The parameter is rejected on the Batches API and unavailable on Amazon Bedrock, Vertex AI, and Microsoft Foundry — register the client-side `BetaRefusalFallbackMiddleware` on the client there instead. Full semantics (sticky routing, billing, streaming, echoing fallback turns back): `shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason.
+最终响应上的 `stop_reason: "refusal"` 表示整条链路都拒绝了。该数组形式的请求头必须恰好是 `server-side-fallback-2026-06-01`；较新的标量形式 `fallbacks: "default"` 则使用 `server-side-fallback-2026-07-01`（见 `shared/model-migration.md` → Migrating to Claude Opus 5 → New API features），把头与另一种形式混用会返回 400。该参数在 Batches API 上会被拒绝，且在 Amazon Bedrock、Vertex AI 和 Microsoft Foundry 上不可用 —— 在这些平台上请改为在客户端注册客户端侧的 `BetaRefusalFallbackMiddleware`。完整语义（粘性路由、计费、流式、回传回退轮次）：`shared/model-migration.md` → Migrating to Claude Fable 5 → `refusal` stop reason。
 
 ---
 
-## Cost Optimization Strategies
+## 成本优化策略
 
-### 1. Use Prompt Caching for Repeated Context
+### 1. 对重复上下文使用提示缓存
 
 ```python
 # Automatic caching (simplest — caches the last cacheable block)
@@ -489,7 +489,7 @@ response = client.messages.create(
 # Subsequent requests: ~90% cheaper for cached portion
 ```
 
-### 2. Choose the Right Model
+### 2. 选择合适的模型
 
 ```python
 # Default to Opus for most tasks
@@ -514,7 +514,7 @@ simple_response = client.messages.create(
 )
 ```
 
-### 3. Use Token Counting Before Requests
+### 3. 请求前先做 Token 计数
 
 ```python
 count_response = client.messages.count_tokens(
@@ -529,9 +529,9 @@ print(f"Estimated input cost: ${estimated_input_cost:.4f}")
 
 ---
 
-## Retry with Exponential Backoff
+## 指数退避重试
 
-> **Note:** The Anthropic SDK automatically retries rate limit (429) and server errors (5xx) with exponential backoff. You can configure this with `max_retries` (default: 2). Only implement custom retry logic if you need behavior beyond what the SDK provides.
+> **说明：** Anthropic SDK 会以指数退避自动重试限流（429）和服务器错误（5xx）。可用 `max_retries` 配置（默认：2）。仅在需要超出 SDK 能力的行为时，才自行实现重试逻辑。
 
 ```python
 import time

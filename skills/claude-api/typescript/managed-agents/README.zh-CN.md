@@ -1,18 +1,18 @@
 # Managed Agents — TypeScript
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Bindings not shown here:** This README covers the most common managed-agents flows for TypeScript. If you need a class, method, namespace, field, or behavior that isn't shown, WebFetch the TypeScript SDK repo **or the relevant docs page** from `shared/live-sources.md` rather than guess. Do not extrapolate from cURL shapes or another language's SDK.
+> **此处未列出的绑定：** 本 README 覆盖 TypeScript 上最常见的 managed-agents 流程。若需要未展示的类、方法、命名空间、字段或行为，请 WebFetch TypeScript SDK 仓库 **或** `shared/live-sources.md` 中的相关文档页，不要猜测。不要从 cURL 形态或其他语言的 SDK 外推。
 
-> **Agents are persistent — create once, reference by ID.** Store the agent ID returned by `agents.create` and pass it to every subsequent `sessions.create`; do not call `agents.create` in the request path. **Recommended:** define agents and environments as version-controlled YAML applied with the `ant` CLI — see `shared/anthropic-cli.md` (its live-docs URL is in `shared/live-sources.md`). The CLI owns the control plane (create/update); your code owns the data plane (sessions with the stored ID). The examples below show in-code creation for when you must provision programmatically; in production the create call belongs in setup, not in the request path.
+> **Agent 是持久的 —— 创建一次，之后用 ID 引用。** 保存 `agents.create` 返回的 agent ID，并在后续每次 `sessions.create` 中传入；不要在请求路径里调用 `agents.create`。**推荐：** 将 agent 和环境定义为纳入版本控制的 YAML，并用 `ant` CLI 应用 —— 见 `shared/anthropic-cli.md`（其在线文档 URL 在 `shared/live-sources.md`）。CLI 负责控制面（创建/更新）；你的代码负责数据面（用已保存的 ID 开 session）。下面的示例展示必须用代码预配时的创建方式；生产环境中，创建调用应放在初始化阶段，而不是请求路径里。
 
-## Installation
+## 安装
 
 ```bash
 npm install @anthropic-ai/sdk
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```typescript
 import Anthropic from "@anthropic-ai/sdk";
@@ -28,7 +28,7 @@ const client = new Anthropic({ apiKey: "your-api-key" });
 
 ---
 
-## Create an Environment
+## 创建环境
 
 ```typescript
 const environment = await client.beta.environments.create(
@@ -45,11 +45,11 @@ console.log(environment.id); // env_...
 
 ---
 
-## Create an Agent (required first step)
+## 创建 Agent（必做的第一步）
 
-> ⚠️ **There is no inline agent config.** `model`/`system`/`tools` live on the agent object, not the session. Always start with `agents.create()` — the session only takes `agent: { type: "agent", id: agent.id }`.
+> ⚠️ **没有内联 agent 配置。** `model`/`system`/`tools` 在 agent 对象上，不在 session 上。始终先调用 `agents.create()` —— session 只接收 `agent: { type: "agent", id: agent.id }`。
 
-### Minimal
+### 最小示例
 
 ```typescript
 // 1. Create the agent (reusable, versioned)
@@ -72,7 +72,7 @@ console.log(session.id, session.status);
 console.log(`Trace: https://platform.claude.com/workspaces/default/sessions/${session.id}`); // swap 'default' for your workspace ID if the API key is not in the Default workspace
 ```
 
-### With system prompt and custom tools
+### 带系统提示和自定义工具
 
 ```typescript
 const agent = await client.beta.agents.create(
@@ -118,7 +118,7 @@ const session = await client.beta.sessions.create(
 
 ---
 
-## Send a User Message
+## 发送用户消息
 
 ```typescript
 await client.beta.sessions.events.send(
@@ -134,11 +134,11 @@ await client.beta.sessions.events.send(
 );
 ```
 
-> 💡 **Stream-first:** Open the stream *before* (or concurrently with) sending the message. The stream only delivers events that occur after it opens — stream-after-send means early events arrive buffered in one batch. See [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns).
+> 💡 **先开流：** 在发送消息*之前*（或同时）打开流。流只会投递打开之后发生的事件 —— 先发送再开流，早期事件会缓冲成一批到达。见 [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns)。
 
 ---
 
-## Stream Events (SSE)
+## 流式事件（SSE）
 
 ```typescript
 // Stream-first: open stream and send concurrently
@@ -181,7 +181,7 @@ for await (const event of stream) {
 
 ---
 
-## Provide Custom Tool Result
+## 提供自定义工具结果
 
 ```typescript
 await client.beta.sessions.events.send(
@@ -200,7 +200,7 @@ await client.beta.sessions.events.send(
 
 ---
 
-## Poll Events
+## 轮询事件
 
 ```typescript
 const events = await client.beta.sessions.events.list(
@@ -213,7 +213,7 @@ for (const event of events.data) {
 
 ---
 
-## Full Streaming Loop with Custom Tools
+## 带自定义工具的完整流式循环
 
 ```typescript
 function runCustomTool(toolName: string, toolInput: unknown): string {
@@ -267,7 +267,7 @@ async function runSession(client: Anthropic, sessionId: string) {
 
 ---
 
-## Upload a File
+## 上传文件
 
 ```typescript
 import fs from "fs";
@@ -289,9 +289,9 @@ const session = await client.beta.sessions.create(
 
 ---
 
-## List and Download Session Files
+## 列出并下载 Session 文件
 
-List files the agent wrote to `/mnt/session/outputs/` during a session, then download them.
+列出 agent 在 session 期间写入 `/mnt/session/outputs/` 的文件，然后下载。
 
 ```typescript
 import fs from "fs";
@@ -311,11 +311,11 @@ for (const f of files.data) {
 }
 ```
 
-> 💡 There's a brief indexing lag (~1–3s) between `session.status_idle` and output files appearing in `files.list`. Retry once or twice if the list is empty.
+> 💡 在 `session.status_idle` 与输出文件出现在 `files.list` 之间，会有短暂索引延迟（约 1–3 秒）。若列表为空，重试一两次。
 
 ---
 
-## Session Management
+## Session 管理
 
 ```typescript
 // Get session details
@@ -334,7 +334,7 @@ await client.beta.sessions.archive("sesn_011CZxAbc123Def456");
 
 ---
 
-## MCP Server Integration
+## MCP 服务器集成
 
 ```typescript
 // Agent declares MCP server (no auth here — auth goes in a vault)
@@ -358,4 +358,4 @@ const session = await client.beta.sessions.create({
 });
 ```
 
-See `shared/managed-agents-tools.md` §Vaults for creating vaults and adding credentials.
+创建 vault 与添加凭据见 `shared/managed-agents-tools.md` 的 Vaults 一节。

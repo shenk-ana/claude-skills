@@ -1,5 +1,7 @@
 # Claude API — Java
 
+> **English** | [中文](./README.zh-CN.md)
+
 > **Note:** The Java SDK supports the Claude API and beta tool use with annotated classes. Agent SDK is not yet available for Java.
 
 ## Package Reference

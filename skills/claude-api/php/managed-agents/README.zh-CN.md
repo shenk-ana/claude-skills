@@ -1,18 +1,18 @@
 # Managed Agents — PHP
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Bindings not shown here:** This README covers the most common managed-agents flows for PHP. If you need a class, method, namespace, field, or behavior that isn't shown, WebFetch the PHP SDK repo **or the relevant docs page** from `shared/live-sources.md` rather than guess. Do not extrapolate from cURL shapes or another language's SDK.
+> **此处未列出的绑定：** 本 README 覆盖 PHP 上最常见的 managed-agents 流程。若需要未展示的类、方法、命名空间、字段或行为，请 WebFetch PHP SDK 仓库 **或** `shared/live-sources.md` 中的相关文档页，不要猜测。不要从 cURL 形态或其他语言的 SDK 外推。
 
-> **Agents are persistent — create once, reference by ID.** Store the agent ID returned by `$client->beta->agents->create` and pass it to every subsequent `->sessions->create`; do not call `agents->create` in the request path. **Recommended:** define agents and environments as version-controlled YAML applied with the `ant` CLI — see `shared/anthropic-cli.md` (its live-docs URL is in `shared/live-sources.md`). The CLI owns the control plane (create/update); your code owns the data plane (sessions with the stored ID). The examples below show in-code creation for when you must provision programmatically; in production the create call belongs in setup, not in the request path.
+> **Agent 是持久的 —— 创建一次，之后用 ID 引用。** 保存 `$client->beta->agents->create` 返回的 agent ID，并在后续每次 `->sessions->create` 中传入；不要在请求路径里调用 `agents->create`。**推荐：** 将 agent 和环境定义为纳入版本控制的 YAML，并用 `ant` CLI 应用 —— 见 `shared/anthropic-cli.md`（其在线文档 URL 在 `shared/live-sources.md`）。CLI 负责控制面（创建/更新）；你的代码负责数据面（用已保存的 ID 开 session）。下面的示例展示必须用代码预配时的创建方式；生产环境中，创建调用应放在初始化阶段，而不是请求路径里。
 
-## Installation
+## 安装
 
 ```bash
 composer require "anthropic-ai/sdk" "guzzlehttp/guzzle:^7"
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```php
 use Anthropic\Client;
@@ -26,7 +26,7 @@ $client = new Client(apiKey: 'your-api-key');
 
 ---
 
-## Create an Environment
+## 创建环境
 
 ```php
 $environment = $client->beta->environments->create(
@@ -38,11 +38,11 @@ echo "Environment ID: {$environment->id}\n"; // env_...
 
 ---
 
-## Create an Agent (required first step)
+## 创建 Agent（必做的第一步）
 
-> ⚠️ **There is no inline agent config.** `model`/`system`/`tools` live on the agent object, not the session. Always start with `$client->beta->agents->create()` — the session takes either `agent: $agent->id` or the typed `BetaManagedAgentsAgentParams::with(type: 'agent', id: $agent->id, version: $agent->version)`.
+> ⚠️ **没有内联 agent 配置。** `model`/`system`/`tools` 在 agent 对象上，不在 session 上。始终先调用 `$client->beta->agents->create()` —— session 接收 `agent: $agent->id` 或类型化的 `BetaManagedAgentsAgentParams::with(type: 'agent', id: $agent->id, version: $agent->version)`。
 
-### Minimal
+### 最小示例
 
 ```php
 use Anthropic\Beta\Agents\BetaManagedAgentsAgentToolset20260401Params;
@@ -69,9 +69,9 @@ echo "Session ID: {$session->id}\n";
 echo "Trace: https://platform.claude.com/workspaces/default/sessions/{$session->id}\n"; // swap 'default' for your workspace ID if the API key is not in the Default workspace
 ```
 
-### Updating an Agent
+### 更新 Agent
 
-Updates create new versions; the agent object is immutable per version.
+更新会创建新版本；每个版本的 agent 对象不可变。
 
 ```php
 $updatedAgent = $client->beta->agents->update(
@@ -93,7 +93,7 @@ echo "Archived at: {$archived->archivedAt->format(DateTimeInterface::ATOM)}\n";
 
 ---
 
-## Send a User Message
+## 发送用户消息
 
 ```php
 $client->beta->sessions->events->send(
@@ -107,13 +107,13 @@ $client->beta->sessions->events->send(
 );
 ```
 
-> 💡 **Stream-first:** Open the stream *before* (or concurrently with) sending the message. The stream only delivers events that occur after it opens — stream-after-send means early events arrive buffered in one batch. See [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns).
+> 💡 **先开流：** 在发送消息*之前*（或同时）打开流。流只会投递打开之后发生的事件 —— 先发送再开流，早期事件会缓冲成一批到达。见 [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns)。
 
 ---
 
-## Stream Events (SSE)
+## 流式事件（SSE）
 
-> ℹ️ **Streaming transporter:** PHP's default buffered PSR-18 client never returns for the open-ended session event stream. Use a streaming Guzzle transporter for `streamStream()` calls — other calls keep the default client.
+> ℹ️ **流式传输器：** PHP 默认的缓冲 PSR-18 客户端永远不会从开放式 session 事件流返回。对 `streamStream()` 调用使用流式 Guzzle 传输器 —— 其他调用继续用默认客户端。
 
 ```php
 $streamingClient = new GuzzleHttp\Client(['stream' => true]);
@@ -150,9 +150,9 @@ foreach ($stream as $event) {
 $stream->close();
 ```
 
-### Reconnecting and Tailing
+### 重连与跟踪
 
-When reconnecting mid-session, list past events first to dedupe, then tail live events:
+中途重连 session 时，先列出历史事件去重，再跟踪实时事件：
 
 ```php
 $stream = $client->beta->sessions->events->streamStream(
@@ -188,13 +188,13 @@ $stream->close();
 
 ---
 
-## Provide Custom Tool Result
+## 提供自定义工具结果
 
-> ℹ️ The PHP managed-agents bindings for `user.custom_tool_result` are not yet documented in this skill or in the apps source examples. Refer to `shared/managed-agents-events.md` for the wire format and the `anthropic-ai/sdk` PHP repository for the corresponding params.
+> ℹ️ PHP 的 managed-agents 对 `user.custom_tool_result` 的绑定尚未在本 skill 或 apps 源码示例中文档化。线格式见 `shared/managed-agents-events.md`，对应的 params 见 `anthropic-ai/sdk` PHP 仓库。
 
 ---
 
-## Poll Events
+## 轮询事件
 
 ```php
 foreach ($client->beta->sessions->events->list($session->id)->pagingEachItem() as $event) {
@@ -204,9 +204,9 @@ foreach ($client->beta->sessions->events->list($session->id)->pagingEachItem() a
 
 ---
 
-## Upload a File
+## 上传文件
 
-> ℹ️ **PHP file upload:** The PHP SDK's beta managed-agents file upload binding is not shown in the apps source examples; the canonical PHP example uses raw cURL against `POST /v1/files`. If your codebase prefers the SDK, WebFetch the `anthropic-ai/sdk` PHP repository for the latest binding before writing code.
+> ℹ️ **PHP 文件上传：** PHP SDK 的 beta managed-agents 文件上传绑定未出现在 apps 源码示例中；规范 PHP 示例使用原始 cURL 调用 `POST /v1/files`。若你的代码库更倾向 SDK，请在写代码前 WebFetch `anthropic-ai/sdk` PHP 仓库以获取最新绑定。
 
 ```php
 use Anthropic\Beta\Sessions\BetaManagedAgentsFileResourceParams;
@@ -241,7 +241,7 @@ $session = $client->beta->sessions->create(
 );
 ```
 
-### Add and Manage Resources on an Existing Session
+### 在已有 Session 上添加与管理资源
 
 ```php
 // Attach an additional file to an open session
@@ -264,7 +264,7 @@ $client->beta->sessions->resources->delete($resource->id, sessionID: $session->i
 
 ---
 
-## List and Download Session Files
+## 列出并下载 Session 文件
 
 ```php
 $files = $client->beta->files->list(
@@ -277,7 +277,7 @@ file_put_contents('output.txt', $content);
 
 ---
 
-## Session Management
+## Session 管理
 
 ```php
 // List environments
@@ -298,7 +298,7 @@ $client->beta->sessions->delete($session->id);
 
 ---
 
-## MCP Server Integration
+## MCP 服务器集成
 
 ```php
 use Anthropic\Beta\Agents\BetaManagedAgentsAgentToolset20260401Params;
@@ -338,7 +338,7 @@ $session = $client->beta->sessions->create(
 );
 ```
 
-See `shared/managed-agents-tools.md` §Vaults for creating vaults and adding credentials.
+创建 vault 与添加凭据见 `shared/managed-agents-tools.md` 的 Vaults 一节。
 
 ---
 
@@ -392,9 +392,9 @@ $client->beta->vaults->archive($vault->id);
 
 ---
 
-## GitHub Repository Integration
+## GitHub 仓库集成
 
-Mount a GitHub repository as a session resource (a vault holds the GitHub MCP credential):
+将 GitHub 仓库挂载为 session 资源（vault 保存 GitHub MCP 凭据）：
 
 ```php
 $session = $client->beta->sessions->create(
@@ -412,7 +412,7 @@ $session = $client->beta->sessions->create(
 );
 ```
 
-Multiple repositories on the same session:
+同一 session 上挂载多个仓库：
 
 ```php
 $resources = [
@@ -431,7 +431,7 @@ $resources = [
 ];
 ```
 
-Rotating a repository's authorization token:
+轮换仓库的授权令牌：
 
 ```php
 $listed = $client->beta->sessions->resources->list($session->id);

@@ -1,18 +1,18 @@
 # Managed Agents — Ruby
 
-> **English** | [中文](./README.zh-CN.md)
+> [English](./README.md) | **中文**
 
-> **Bindings not shown here:** This README covers the most common managed-agents flows for Ruby. If you need a class, method, namespace, field, or behavior that isn't shown, WebFetch the Ruby SDK repo **or the relevant docs page** from `shared/live-sources.md` rather than guess. Do not extrapolate from cURL shapes or another language's SDK.
+> **此处未列出的绑定：** 本 README 覆盖 Ruby 上最常见的 managed-agents 流程。若需要未展示的类、方法、命名空间、字段或行为，请 WebFetch Ruby SDK 仓库 **或** `shared/live-sources.md` 中的相关文档页，不要猜测。不要从 cURL 形态或其他语言的 SDK 外推。
 
-> **Agents are persistent — create once, reference by ID.** Store the agent ID returned by `client.beta.agents.create` and pass it to every subsequent `client.beta.sessions.create`; do not call `agents.create` in the request path. **Recommended:** define agents and environments as version-controlled YAML applied with the `ant` CLI — see `shared/anthropic-cli.md` (its live-docs URL is in `shared/live-sources.md`). The CLI owns the control plane (create/update); your code owns the data plane (sessions with the stored ID). The examples below show in-code creation for when you must provision programmatically; in production the create call belongs in setup, not in the request path.
+> **Agent 是持久的 —— 创建一次，之后用 ID 引用。** 保存 `client.beta.agents.create` 返回的 agent ID，并在后续每次 `client.beta.sessions.create` 中传入；不要在请求路径里调用 `agents.create`。**推荐：** 将 agent 和环境定义为纳入版本控制的 YAML，并用 `ant` CLI 应用 —— 见 `shared/anthropic-cli.md`（其在线文档 URL 在 `shared/live-sources.md`）。CLI 负责控制面（创建/更新）；你的代码负责数据面（用已保存的 ID 开 session）。下面的示例展示必须用代码预配时的创建方式；生产环境中，创建调用应放在初始化阶段，而不是请求路径里。
 
-## Installation
+## 安装
 
 ```bash
 gem install anthropic
 ```
 
-## Client Initialization
+## 初始化客户端
 
 ```ruby
 require "anthropic"
@@ -24,11 +24,11 @@ client = Anthropic::Client.new
 client = Anthropic::Client.new(api_key: "your-api-key")
 ```
 
-> ⚠️ **Trailing underscores:** The Ruby SDK uses `system_:` and `send_(` (trailing underscore) to avoid shadowing `Kernel#system` and `Kernel#send`. Use these forms throughout managed-agents code.
+> ⚠️ **末尾下划线：** Ruby SDK 使用 `system_:` 和 `send_(`（末尾下划线）以避免遮蔽 `Kernel#system` 和 `Kernel#send`。在 managed-agents 代码中请始终使用这些形式。
 
 ---
 
-## Create an Environment
+## 创建环境
 
 ```ruby
 environment = client.beta.environments.create(
@@ -43,11 +43,11 @@ puts "Environment ID: #{environment.id}" # env_...
 
 ---
 
-## Create an Agent (required first step)
+## 创建 Agent（必做的第一步）
 
-> ⚠️ **There is no inline agent config.** `model`/`system_`/`tools` live on the agent object, not the session. Always start with `client.beta.agents.create()` — the session takes either `agent: agent.id` or the typed hash form `agent: {type: "agent", id: agent.id, version: agent.version}`.
+> ⚠️ **没有内联 agent 配置。** `model`/`system_`/`tools` 在 agent 对象上，不在 session 上。始终先调用 `client.beta.agents.create()` —— session 接收 `agent: agent.id` 或类型化 hash 形式 `agent: {type: "agent", id: agent.id, version: agent.version}`。
 
-### Minimal
+### 最小示例
 
 ```ruby
 # 1. Create the agent (reusable, versioned)
@@ -68,9 +68,9 @@ puts "Session ID: #{session.id}"
 puts "Trace: https://platform.claude.com/workspaces/default/sessions/#{session.id}"  # swap 'default' for your workspace ID if the API key is not in the Default workspace
 ```
 
-### Updating an Agent
+### 更新 Agent
 
-Updates create new versions; the agent object is immutable per version.
+更新会创建新版本；每个版本的 agent 对象不可变。
 
 ```ruby
 updated_agent = client.beta.agents.update(
@@ -92,7 +92,7 @@ puts "Archived at: #{archived.archived_at.iso8601}"
 
 ---
 
-## Send a User Message
+## 发送用户消息
 
 ```ruby
 client.beta.sessions.events.send_(
@@ -104,11 +104,11 @@ client.beta.sessions.events.send_(
 )
 ```
 
-> 💡 **Stream-first:** Open the stream *before* (or concurrently with) sending the message. The stream only delivers events that occur after it opens — stream-after-send means early events arrive buffered in one batch. See [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns).
+> 💡 **先开流：** 在发送消息*之前*（或同时）打开流。流只会投递打开之后发生的事件 —— 先发送再开流，早期事件会缓冲成一批到达。见 [Steering Patterns](../../shared/managed-agents-events.md#steering-patterns)。
 
 ---
 
-## Stream Events (SSE)
+## 流式事件（SSE）
 
 ```ruby
 # Open the stream first, then send the user message
@@ -139,11 +139,11 @@ stream.each do |event|
 end
 ```
 
-> ℹ️ Event `.type` is a Symbol (compare with `:"agent.message"`, not `"agent.message"`).
+> ℹ️ 事件的 `.type` 是 Symbol（与 `:"agent.message"` 比较，而不是 `"agent.message"`）。
 
-### Reconnecting and Tailing
+### 重连与跟踪
 
-When reconnecting mid-session, list past events first to dedupe, then tail live events:
+中途重连 session 时，先列出历史事件去重，再跟踪实时事件：
 
 ```ruby
 require "set"
@@ -171,13 +171,13 @@ end
 
 ---
 
-## Provide Custom Tool Result
+## 提供自定义工具结果
 
-> ℹ️ The Ruby managed-agents bindings for `user.custom_tool_result` are not yet documented in this skill or in the apps source examples. Refer to `shared/managed-agents-events.md` for the wire format and the `anthropic` Ruby gem repository for the corresponding params.
+> ℹ️ Ruby 的 managed-agents 对 `user.custom_tool_result` 的绑定尚未在本 skill 或 apps 源码示例中文档化。线格式见 `shared/managed-agents-events.md`，对应的 params 见 `anthropic` Ruby gem 仓库。
 
 ---
 
-## Poll Events
+## 轮询事件
 
 ```ruby
 client.beta.sessions.events.list(session.id).auto_paging_each do |event|
@@ -187,7 +187,7 @@ end
 
 ---
 
-## Upload a File
+## 上传文件
 
 ```ruby
 require "pathname"
@@ -209,7 +209,7 @@ session = client.beta.sessions.create(
 )
 ```
 
-### Add and Manage Resources on an Existing Session
+### 在已有 Session 上添加与管理资源
 
 ```ruby
 # Attach an additional file to an open session
@@ -230,7 +230,7 @@ client.beta.sessions.resources.delete(resource.id, session_id: session.id)
 
 ---
 
-## List and Download Session Files
+## 列出并下载 Session 文件
 
 ```ruby
 files = client.beta.files.list(scope_id: "sesn_abc123", betas: ["managed-agents-2026-04-01"])
@@ -240,7 +240,7 @@ File.binwrite("output.txt", content.read)
 
 ---
 
-## Session Management
+## Session 管理
 
 ```ruby
 # List environments
@@ -261,7 +261,7 @@ client.beta.sessions.delete(session.id)
 
 ---
 
-## MCP Server Integration
+## MCP 服务器集成
 
 ```ruby
 # Agent declares MCP server (no auth here — auth goes in a vault)
@@ -289,7 +289,7 @@ session = client.beta.sessions.create(
 )
 ```
 
-See `shared/managed-agents-tools.md` §Vaults for creating vaults and adding credentials.
+创建 vault 与添加凭据见 `shared/managed-agents-tools.md` 的 Vaults 一节。
 
 ---
 
@@ -343,9 +343,9 @@ client.beta.vaults.archive(vault.id)
 
 ---
 
-## GitHub Repository Integration
+## GitHub 仓库集成
 
-Mount a GitHub repository as a session resource (a vault holds the GitHub MCP credential):
+将 GitHub 仓库挂载为 session 资源（vault 保存 GitHub MCP 凭据）：
 
 ```ruby
 session = client.beta.sessions.create(
@@ -363,7 +363,7 @@ session = client.beta.sessions.create(
 )
 ```
 
-Multiple repositories on the same session:
+同一 session 上挂载多个仓库：
 
 ```ruby
 resources = [
@@ -382,7 +382,7 @@ resources = [
 ]
 ```
 
-Rotating a repository's authorization token:
+轮换仓库的授权令牌：
 
 ```ruby
 listed = client.beta.sessions.resources.list(session.id)
