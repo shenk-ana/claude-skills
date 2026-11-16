@@ -1,7 +1,7 @@
 ---
 name: xlsx
 description: "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved."
-license: Proprietary. LICENSE.txt has complete terms
+license: Complete terms in LICENSE.txt
 ---
 
 # XLSX creation, editing, and analysis
@@ -12,7 +12,8 @@ license: Proprietary. LICENSE.txt has complete terms
 | **Bulk data** in or out | `pandas` (`read_excel`, `to_excel`) |
 | **Quick look** at a sheet | `markitdown file.xlsx` — `## SheetName` per sheet; reads `.xlsm` too. No cell coordinates, so don't plan edits from it |
 | **Read** a model (formulas *and* values) | two `load_workbook` passes — see gotchas |
-| **Flowchart / diagram** | insert as image | Graphviz or Mermaid → PNG → `openpyxl` — see "Flowchart → Excel" section below |
+| **Flowchart / diagram** | native Excel shapes via `scripts/add_shapes.py`, run last — read [FLOWCHART.md](FLOWCHART.md) first |
+
 > `openpyxl`, `pandas`, and `markitdown` are preinstalled — do not run `pip install` first; write the script and import directly. Only if an import fails (or the `markitdown` command is missing): `pip install` the missing package.
 
 > Script paths below are relative to this skill's directory.
@@ -20,7 +21,7 @@ license: Proprietary. LICENSE.txt has complete terms
 ## Requirements for every output
 
 - **Professional font** (Meiryo UI) throughout, unless the user says otherwise.
-- **Zero formula errors.** Never ship while `recalc.py` reports `errors_found`. If you think an error predates you, prove it: load the *original* with `data_only=True` and look at that cell. An error you introduced looks exactly like one you inherited.
+- **Zero formula errors.** Never ship while `recalc.py` reports `errors_found`; the one exception is under `not_computed` below. If you think an error predates you, prove it: load the *original* with `data_only=True` and look at that cell. An error you introduced looks exactly like one you inherited.
 - **Use formulas, never hardcoded results.** Write `sheet['B10'] = '=SUM(B2:B9)'`, not the Python-computed total. The sheet must recalculate when its inputs change.
 - **Follow the user's spec literally.** Exact tab names, exact column headers, and the formula they spelled out. A redesign that computes something else fails, however elegant.
 - **Document every assumption and hardcoded number** where the reader will see it — a cell comment, or an adjacent cell at a table's end. Cite a real source when one exists (`Source: Company 10-K, FY2024, Page 45, Revenue Note, [SEC EDGAR URL]`); when the number came from the user, say so plainly.
@@ -37,7 +38,7 @@ formula cell reads back as `None` to anything reading cached values — `pandas`
 python scripts/recalc.py output.xlsx [timeout_seconds]   # default 30
 ```
 
-LibreOffice computes every formula, the file is **rewritten in place**, and you get JSON:
+LibreOffice computes the formulas **on a copy**, only their values go into your file, and you get JSON:
 `status` (`success` | `errors_found`), `total_formulas`, `total_errors`, and an
 `error_summary` naming up to 100 cells per error type (`locations_truncated` says how many it
 withheld — trust `total_errors`, not the length of the list). Fix what it names and run it
@@ -49,24 +50,23 @@ workbook.
 range or a reference to the wrong row yields a clean, error-free file with wrong numbers.
 Write 2–3 formulas first and check they pull the values you expect, before building out a grid.
 
-**A workbook that links to another file loses those links** if you re-save it with openpyxl and
-then recalculate. Such a formula reads `='[1]Returns Analysis'!$B$2` — the `[1]` is an index
-into the workbook's external-reference list, naming a *separate file on disk*, not a sheet.
-That file is rarely present here, so the cell's cached value is the only thing holding its
-data. openpyxl strips that value on save; LibreOffice then has to resolve the reference for
-real, fails, writes `#NAME?`, and deletes every link. `recalc.py` refuses to run in that state
-— copy those cells' values out of the original before you save over them (`--force` overrides,
-and accepts the loss).
+**`not_computed` lists formulas LibreOffice cannot evaluate, even on `success`**: a function it lacks
+(`_xlfn.XLOOKUP`, `_xlfn.LET`…) or a link to another workbook (`='[1]Returns Analysis'!$B$2`). They
+keep what they held: after an openpyxl save, nothing until Excel opens it. For their numbers sooner,
+read the original with `data_only=True`; keep the formulas. A sound formula depending on a listed one,
+directly or not, reports `#NAME?` too: leave it and tell the user. A cell that tests one
+(`IFERROR(B1,0)`) gets LibreOffice's fallback, and a kept value may be stale: say so. After editing
+sheet XML, delete each changed formula's `<v>`: a mistake that keeps its value is listed, not reported.
 
 ## Choosing formulas that survive verification
 
-LibreOffice implements fewer functions than Excel, and one it cannot evaluate becomes a
-literal `#NAME?` baked into the file you deliver.
+LibreOffice implements fewer functions than Excel, and a formula it cannot evaluate has no value
+until Excel opens the file.
 
 - **Prefer Excel-2007-era functions** — `SUMIFS`, `INDEX`, `MATCH`, `IFERROR`, `SUMPRODUCT` — which need no prefix.
 - **Six post-2007 functions work, but only with an `_xlfn.` prefix**, because openpyxl writes your formula into the XML verbatim and Excel stores post-2007 names prefixed (its UI hides the prefix): `_xlfn.TEXTJOIN`, `_xlfn.CONCAT`, `_xlfn.IFS`, `_xlfn.SWITCH`, `_xlfn.MAXIFS`, `_xlfn.MINIFS`. Written bare, each yields `#NAME?`.
-- **Never use `XLOOKUP`, `XMATCH`, `SORT`, `FILTER`, `UNIQUE`, or `SEQUENCE`.** The runtime's LibreOffice cannot evaluate them under *any* prefix. Newer builds do evaluate them, but they are spilling array functions and an openpyxl-written file has no spill metadata, so only the top-left cell of the range gets a value — and `recalc.py` reports `total_errors: 0` on the truncated result. Use `INDEX`/`MATCH` for lookups, and sort, filter, and de-duplicate in Python before writing the cells.
-- A formula LibreOffice could not parse is written back **lowercased** — a quick tell beside a `#NAME?`.
+- **Never use `XLOOKUP`, `XMATCH`, `SORT`, `FILTER`, `UNIQUE`, or `SEQUENCE`.** The runtime's LibreOffice cannot evaluate them, and one that can fills only the top-left cell of their result, since an openpyxl-written file has no spill metadata. Use `INDEX`/`MATCH` for lookups, and sort, filter, and de-duplicate in Python before writing the cells.
+- A missing `)` is reported as `unbalanced brackets`. Too few arguments (`=ROUND(A1)`) is not: LibreOffice returns a value, and Excel may offer to repair the file.
 
 ## openpyxl gotchas
 
@@ -76,81 +76,13 @@ literal `#NAME?` baked into the file you deliver.
 - **Merged cells: write the top-left anchor only.** Every other cell in the range is a `MergedCell` whose `.value` is read-only.
 - **`.xlsm` loses its macros unless you pass `keep_vba=True`** to `load_workbook`.
 - **A sheet name containing a space must be quoted** in a cross-sheet reference: `='Assumptions Inputs'!$B$5`. Unquoted, it evaluates to `#VALUE!`.
-## Flowchart → Excel
+- **Saving an upload drops its text boxes, shapes and slicers.** First search `xl/drawings/` for `<xdr:sp ` (with the space) and look for an `xl/slicers/` part; if found, tell the user or edit the sheet XML directly.
+- **Nothing mends a malformed workbook**: an unclosed quote in a number format (`'0.00 "USD'`), a defined name starting with `=`, or duplicate or empty table headers are saved as written, and Excel may offer to repair the file.
+- **Partly bold or italic cell text is flattened** unless `load_workbook(rich_text=True)`; such a `.value` is then a `CellRichText`, not a `str`.
+- **Every new formula needs its own `number_format`** (date, %, currency): nothing infers it, so a date shows as `45337` and 30% as `0.3`.
+- **On every new chart set `chart.roundedCorners = False`, `.overlay = False` on its legend and on each title you gave it (`chart.legend`, `chart.title`, `chart.x_axis.title`…), and, if it has axes (not pie or doughnut), `chart.x_axis.delete = False` and `chart.y_axis.delete = False`**, or Excel may draw the title or legend over the plot, round the frame, or draw no axes.
+- **With a `DateAxis`, set `chart.y_axis.crossAx = 500`**, or Excel may offer to repair the file.
 
-| Task | Approach |
-|---|---|
-| **Define flowchart structure** | Graphviz (DOT) or Mermaid — describe nodes/edges as text, don't hand-place coordinates |
-| **Render to image** | `dot` (Graphviz) or `mmdc` (Mermaid) |
-| **Insert into Excel** | `openpyxl.drawing.image.Image`, same as any other image insert |
-
-### Choosing a renderer
-
-**Check what's already installed before choosing — don't default to one tool.**
-
-```bash
-which dot 2>/dev/null && echo "Graphviz available"
-which mmdc 2>/dev/null && echo "Mermaid CLI available"
-```
-
-- **Both available** → prefer Graphviz for simple flowcharts/decision trees (lighter, faster, no browser dependency). Prefer Mermaid only if the user also needs sequence diagrams, Gantt charts, or other Mermaid-specific chart types in the same deliverable.
-- **Only one available** → use that one.
-- **Neither available** → **do not install silently.** Ask the user for permission first, and say which one you'd install and why:
-  - Graphviz: small native binary, no browser dependency, easier to install in restricted/corporate networks.
-  - Mermaid (`@mermaid-js/mermaid-cli`): heavier — pulls in Node.js + Puppeteer + a bundled Chromium (100–300MB), more likely to fail behind a corporate proxy or without admin rights.
-  - Default suggestion when the user has no preference: **install Graphviz** (`pip install graphviz` for the Python wrapper, plus the native `dot` binary via the OS package manager) — lower footprint, higher success rate in constrained environments.
-- **Install fails or is denied** → fall back to the manual-coordinates image method (matplotlib/PIL) described earlier in this doc, or the native-shapes (`xdr:sp`) approach if the user needs the result editable inside Excel.
-
-### Rendering commands
-
-```bash
-# Graphviz
-dot -Tpng -Gdpi=200 flowchart.dot -o flowchart.png
-
-# Mermaid
-mmdc -i flowchart.mmd -o flowchart.png -b white --scale 3
-```
-
-```python
-# Insert into Excel (same for either renderer's output)
-from openpyxl.drawing.image import Image as XLImage
-img = XLImage("flowchart.png")
-img.width, img.height = 420, 540   # scale proportionally, never stretch
-ws.add_image(img, "A4")
-```
-### Reserve space below the image (don't guess row count)
-
-`ws.add_image(img, "A4")` creates a `oneCellAnchor`: the image floats at a fixed pixel size and does not push cells down or resize with them. If content after the image is placed a fixed number of rows below based on an assumed default row height, that assumption is unreliable across viewers/locales — the image can end up taller than the gap and visually cover the next section's headers/text.
-
-Compute the rows to skip from the image's **actual** pixel height, and explicitly set the row height for every row in that span so the reserved space is deterministic — don't rely on the default:
-
-```python
-from openpyxl.utils import row_col_to_cell  # not required, shown for clarity
-
-img_height_px = 540          # the height you set on the XLImage
-px_per_pt = 96 / 72           # standard screen DPI conversion
-row_height_pt = 15            # explicit row height you're reserving, in points
-row_height_px = row_height_pt * px_per_pt
-
-start_row = 4                 # the row the image is anchored to (e.g. "A4")
-rows_needed = int(img_height_px / row_height_px) + 1  # +1 for rounding slack
-margin_rows = 2                # a couple of extra rows of margin
-
-for r in range(start_row, start_row + rows_needed + margin_rows):
-    ws.row_dimensions[r].height = row_height_pt
-
-next_content_row = start_row + rows_needed + margin_rows
-ws[f"A{next_content_row}"] = "..."  # safe to write here, guaranteed clear of the image
-```
-
-Never assume a default row height (e.g. "~20px/row") to eyeball where the next section starts — set it explicitly, or the layout silently breaks depending on the viewer/locale's default row height.
-### Things to verify before shipping
-
-- **Check the rendered image against the source definition** (`.dot`/`.mmd`), not just that the render command exited 0 — a malformed edge or bracket is often silently dropped rather than raising an error.
-- **CJK text**: neither renderer's default font reliably covers CJK glyphs. Graphviz: set `fontname` to a CJK-capable font (e.g. `"Noto Sans CJK SC"`) in the `.dot` file. Mermaid: override `font-family` via `--cssFile` or ensure the environment has Noto Sans CJK pre-installed.
-- **The image is static once inserted** — node text/position cannot be edited inside Excel afterward. If editable shapes are required, use the native-shapes approach (`xdr:sp` with `flowChartXxx` preset geometries) instead.
-- **Match aspect ratio** when setting `img.width`/`img.height` — check the source image's native dimensions first, don't stretch.
-  
 ## Financial models
 
 Unless the user says otherwise, or the existing file already does something else.
@@ -170,4 +102,4 @@ lone edited cell mid-row is the commonest silent error · guard denominators tha
 
 ## Dependencies
 
-`openpyxl`, `pandas`, `markitdown` (pip, preinstalled — install only if an import fails or the command is missing) · LibreOffice (`soffice`, auto-configured for sandboxed environments via `scripts/office/soffice.py`)
+`openpyxl`, `pandas`, `markitdown` (pip, preinstalled — install only if an import fails or the command is missing) · LibreOffice (`soffice`, auto-configured for sandboxed environments via `scripts/office/soffice.py`) · `lxml` (for `scripts/add_shapes.py`)
