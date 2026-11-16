@@ -12,7 +12,8 @@ license: Complete terms in LICENSE.txt
 | **Bulk data** in or out | `pandas` (`read_excel`, `to_excel`) |
 | **Quick look** at a sheet | `markitdown file.xlsx` — `## SheetName` per sheet; reads `.xlsm` too. No cell coordinates, so don't plan edits from it |
 | **Read** a model (formulas *and* values) | two `load_workbook` passes — see gotchas |
-| **Flowchart / diagram** | insert as image | Graphviz or Mermaid → PNG → `openpyxl` — see "Flowchart → Excel" section below |
+| **Flowchart / diagram** | native Excel shapes via `scripts/add_shapes.py`, run last — read [FLOWCHART.md](FLOWCHART.md) first |
+
 > `openpyxl`, `pandas`, and `markitdown` are preinstalled — do not run `pip install` first; write the script and import directly. Only if an import fails (or the `markitdown` command is missing): `pip install` the missing package.
 
 > Script paths below are relative to this skill's directory.
@@ -82,81 +83,6 @@ until Excel opens the file.
 - **On every new chart set `chart.roundedCorners = False`, `.overlay = False` on its legend and on each title you gave it (`chart.legend`, `chart.title`, `chart.x_axis.title`…), and, if it has axes (not pie or doughnut), `chart.x_axis.delete = False` and `chart.y_axis.delete = False`**, or Excel may draw the title or legend over the plot, round the frame, or draw no axes.
 - **With a `DateAxis`, set `chart.y_axis.crossAx = 500`**, or Excel may offer to repair the file.
 
-## Flowchart → Excel
-
-| Task | Approach |
-|---|---|
-| **Define flowchart structure** | Graphviz (DOT) or Mermaid — describe nodes/edges as text, don't hand-place coordinates |
-| **Render to image** | `dot` (Graphviz) or `mmdc` (Mermaid) |
-| **Insert into Excel** | `openpyxl.drawing.image.Image`, same as any other image insert |
-
-### Choosing a renderer
-
-**Check what's already installed before choosing — don't default to one tool.**
-
-```bash
-which dot 2>/dev/null && echo "Graphviz available"
-which mmdc 2>/dev/null && echo "Mermaid CLI available"
-```
-
-- **Both available** → prefer Graphviz for simple flowcharts/decision trees (lighter, faster, no browser dependency). Prefer Mermaid only if the user also needs sequence diagrams, Gantt charts, or other Mermaid-specific chart types in the same deliverable.
-- **Only one available** → use that one.
-- **Neither available** → **do not install silently.** Ask the user for permission first, and say which one you'd install and why:
-  - Graphviz: small native binary, no browser dependency, easier to install in restricted/corporate networks.
-  - Mermaid (`@mermaid-js/mermaid-cli`): heavier — pulls in Node.js + Puppeteer + a bundled Chromium (100–300MB), more likely to fail behind a corporate proxy or without admin rights.
-  - Default suggestion when the user has no preference: **install Graphviz** (`pip install graphviz` for the Python wrapper, plus the native `dot` binary via the OS package manager) — lower footprint, higher success rate in constrained environments.
-- **Install fails or is denied** → fall back to the manual-coordinates image method (matplotlib/PIL) described earlier in this doc, or the native-shapes (`xdr:sp`) approach if the user needs the result editable inside Excel.
-
-### Rendering commands
-
-```bash
-# Graphviz
-dot -Tpng -Gdpi=200 flowchart.dot -o flowchart.png
-
-# Mermaid
-mmdc -i flowchart.mmd -o flowchart.png -b white --scale 3
-```
-
-```python
-# Insert into Excel (same for either renderer's output)
-from openpyxl.drawing.image import Image as XLImage
-img = XLImage("flowchart.png")
-img.width, img.height = 420, 540   # scale proportionally, never stretch
-ws.add_image(img, "A4")
-```
-### Reserve space below the image (don't guess row count)
-
-`ws.add_image(img, "A4")` creates a `oneCellAnchor`: the image floats at a fixed pixel size and does not push cells down or resize with them. If content after the image is placed a fixed number of rows below based on an assumed default row height, that assumption is unreliable across viewers/locales — the image can end up taller than the gap and visually cover the next section's headers/text.
-
-Compute the rows to skip from the image's **actual** pixel height, and explicitly set the row height for every row in that span so the reserved space is deterministic — don't rely on the default:
-
-```python
-from openpyxl.utils import row_col_to_cell  # not required, shown for clarity
-
-img_height_px = 540          # the height you set on the XLImage
-px_per_pt = 96 / 72           # standard screen DPI conversion
-row_height_pt = 15            # explicit row height you're reserving, in points
-row_height_px = row_height_pt * px_per_pt
-
-start_row = 4                 # the row the image is anchored to (e.g. "A4")
-rows_needed = int(img_height_px / row_height_px) + 1  # +1 for rounding slack
-margin_rows = 2                # a couple of extra rows of margin
-
-for r in range(start_row, start_row + rows_needed + margin_rows):
-    ws.row_dimensions[r].height = row_height_pt
-
-next_content_row = start_row + rows_needed + margin_rows
-ws[f"A{next_content_row}"] = "..."  # safe to write here, guaranteed clear of the image
-```
-
-Never assume a default row height (e.g. "~20px/row") to eyeball where the next section starts — set it explicitly, or the layout silently breaks depending on the viewer/locale's default row height.
-### Things to verify before shipping
-
-- **Check the rendered image against the source definition** (`.dot`/`.mmd`), not just that the render command exited 0 — a malformed edge or bracket is often silently dropped rather than raising an error.
-- **CJK text**: neither renderer's default font reliably covers CJK glyphs. Graphviz: set `fontname` to a CJK-capable font (e.g. `"Noto Sans CJK SC"`) in the `.dot` file. Mermaid: override `font-family` via `--cssFile` or ensure the environment has Noto Sans CJK pre-installed.
-- **The image is static once inserted** — node text/position cannot be edited inside Excel afterward. If editable shapes are required, use the native-shapes approach (`xdr:sp` with `flowChartXxx` preset geometries) instead.
-- **Match aspect ratio** when setting `img.width`/`img.height` — check the source image's native dimensions first, don't stretch.
-  
 ## Financial models
 
 Unless the user says otherwise, or the existing file already does something else.
@@ -176,4 +102,4 @@ lone edited cell mid-row is the commonest silent error · guard denominators tha
 
 ## Dependencies
 
-`openpyxl`, `pandas`, `markitdown` (pip, preinstalled — install only if an import fails or the command is missing) · LibreOffice (`soffice`, auto-configured for sandboxed environments via `scripts/office/soffice.py`)
+`openpyxl`, `pandas`, `markitdown` (pip, preinstalled — install only if an import fails or the command is missing) · LibreOffice (`soffice`, auto-configured for sandboxed environments via `scripts/office/soffice.py`) · `lxml` (for `scripts/add_shapes.py`)
