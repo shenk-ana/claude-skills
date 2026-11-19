@@ -18,7 +18,7 @@ When syncing hits a conflict, this list says which side is ours.
 | File | Content |
 |---|---|
 | `README.zh-CN.md`, `skills/claude-api/*/*/README.zh-CN.md` | Chinese translations |
-| `skills/xlsx/HOUSE_RULES.md` | Fork rules: Meiryo UI, shapes, layout and hand-over checks. Overrides `SKILL.md` |
+| `skills/xlsx/HOUSE_RULES.md` | Fork rules: Meiryo UI, shapes, cell layout and hand-over checks. Overrides `SKILL.md` |
 | `skills/xlsx/FLOWCHART.md` | Flowcharts as native Excel shapes |
 | `skills/xlsx/scripts/add_shapes.py` | Writes DrawingML shapes into a workbook |
 | `CUSTOMIZATIONS.md` | This file |

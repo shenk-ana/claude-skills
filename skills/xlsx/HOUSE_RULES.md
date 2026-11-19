@@ -37,15 +37,13 @@ openpyxl drops shapes when it saves, so put them back as the last step
 - When writing sheet XML by hand, make sure the root declares every prefix it uses (`xmlns:r` for `<drawing r:id>`),
   then parse every part with `xml.etree.ElementTree` (minidom does not catch an unbound prefix; Excel refuses the file).
 
-## Writing documentation workbooks
+## Cell layout
 
 - A table stays a table; merged cells are fine there. A plain sentence outside a table goes into its own cell:
   no merge, no wrap. Split a long sentence over two rows.
 - Size a table to its content. Do not stretch it to the right edge of the sheet.
-- Headings are `■Heading`, with no number after `■`.
-- Supplementary notes go **last**, under `■補足`, one `※` per note.
-- State each fact once. If a behavior applies to several items, put it in one shared place.
-- Do not add a row to the revision history unless the user asks.
+- When the content gets narrower, set the print area to match and fit the sheet to one page,
+  so it neither prints tiny nor spills onto a second page.
 
 ## Before handing over
 

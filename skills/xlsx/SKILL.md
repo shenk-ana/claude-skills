@@ -6,7 +6,7 @@ license: Complete terms in LICENSE.txt
 
 # XLSX creation, editing, and analysis
 
-> **Read [HOUSE_RULES.md](HOUSE_RULES.md) first.** It holds this fork's rules (font, shapes, layout) and overrides this file where they differ.
+> **Read [HOUSE_RULES.md](HOUSE_RULES.md) first.** It holds this fork's rules (font, shapes, cell layout) and overrides this file where they differ.
 
 | Task | Approach |
 |---|---|
